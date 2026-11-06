@@ -81,6 +81,18 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 主要内容为 F2FS/ZRAM 压缩、SUS_MOUNT、MGLRU 修复、HybridMount、UFS blk-mq 和游戏/日志配置。
 
+## License
+
+本项目原创部分采用 `GPL-2.0-only`；Linux 内核部分仍为 `GPL-2.0 WITH Linux-syscall-note`。
+
+本仓库是组合分发，包含多个第三方组件，各自保留其许可证。完整说明：
+
+- `LICENSE`：本项目原创部分与 GPL-2.0 全文
+- `THIRD_PARTY_NOTICES.md`：第三方组件来源与授权状态
+- `LICENSING.md`：GPL 合规方式与尚未解决的授权问题
+
+注意：SuSFS 上游声明为 GPL-3.0，与 GPL-2.0-only 内核的组合问题尚未完全澄清；华为/OPPO 压缩算法代码的授权状态也未明确。详见 `LICENSING.md`。
+
 ## Credits
 
 - DXRN-MoonWake

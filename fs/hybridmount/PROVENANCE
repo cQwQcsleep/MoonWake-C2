@@ -1,0 +1,8 @@
+# HybridMount provenance
+
+HybridMount VFS path redirection subsystem.
+
+- Forked from NoMount: https://github.com/maxsteeel/nomount
+- Upstream license: GPL-2.0
+- Local license: see `LICENSE` in this directory (GPL-2.0)
+- Local changes: integrated into the MoonWake C2 kernel tree; upstream copyright notices are retained in source headers.
