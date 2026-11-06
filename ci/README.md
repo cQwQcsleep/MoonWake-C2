@@ -22,3 +22,9 @@ Outputs:
 - `MoonWake_2.7.0_C2_config.txt`
 - `MoonWake_2.7.0_C2_System.map`
 - `MoonWake_2.7.0_C2_ksu.txt`
+
+## Vendored dependencies
+
+- `anykernel3/` is vendored; the workflow uses it directly (`AnyKernel3.repo = local`).
+- `kernelsu/KernelSU-Next/` is vendored; `ci/ksun-moonwake.sh` uses it directly.
+- The clang toolchain is still downloaded as a compiler binary; it is not a project source dependency.

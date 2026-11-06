@@ -61,7 +61,7 @@
       }
     },
     "AnyKernel3": {
-      "repo": "https://github.com/DXRN-MoonWake/AnyKernel3",
+      "repo": "local",
       "branch": "ruby"
     }
   }

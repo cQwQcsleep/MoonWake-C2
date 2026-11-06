@@ -186,8 +186,13 @@ jobs:
         run: |
           ANYKERNEL_REPO=$(echo $params | jq -r ".repo")
           ANYKERNEL_BRANCH=$(echo $params | jq -r ".branch")
-          git clone --recursive --depth=1 -j $(nproc) --branch $ANYKERNEL_BRANCH $ANYKERNEL_REPO AnyKernel3
-          echo "Setup Anykernel3 => ($ANYKERNEL_REPO)"
+          if [ "$ANYKERNEL_REPO" = "local" ]; then
+            cp -a "$GITHUB_WORKSPACE/anykernel3" AnyKernel3
+            echo "Setup Anykernel3 => (vendored)"
+          else
+            git clone --recursive --depth=1 -j $(nproc) --branch $ANYKERNEL_BRANCH $ANYKERNEL_REPO AnyKernel3
+            echo "Setup Anykernel3 => ($ANYKERNEL_REPO)"
+          fi
       - name: "Clone kernel source => (${{ env.KERNEL_REPO }})"
         run: |
           git clone --recursive --depth=1 -j $(nproc) --branch $KERNEL_BRANCH $KERNEL_REPO $KERNEL_NAME
