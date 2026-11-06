@@ -44,6 +44,7 @@ setup_kernelsu() {
     if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/kernelsu/KernelSU-Next/kernel" ]; then
         KSU_SRC="$GITHUB_WORKSPACE/kernelsu/KernelSU-Next"
         echo "[+] Using vendored KernelSU-Next: $KSU_SRC"
+        ln -sfn "$KSU_SRC" "$GKI_ROOT/$REPO"
     else
         KSU_SRC="$GKI_ROOT/$REPO"
         test -d "$KSU_SRC" || git clone "https://github.com/$OWNER/$REPO" "$KSU_SRC" && echo "[+] Repository cloned."

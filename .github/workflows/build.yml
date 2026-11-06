@@ -329,7 +329,12 @@ jobs:
         run: |
           echo "" > .scmversion
           curl -LSs "${{ env.kernelSUsetupLink }}" | bash -s ${{ env.kernelSUsetupArg }}
-          KERNELSU_TYPE_ROOT_IMPL_VERSION=$(cd ${{ env.kernelSUsetupName }} && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+          if [ -d "${{ env.kernelSUsetupName }}/.git" ]; then
+            KERNELSU_TYPE_ROOT_IMPL_VERSION=$(cd ${{ env.kernelSUsetupName }} && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+          else
+            KERNELSU_TYPE_ROOT_IMPL_VERSION=10200
+            echo "Vendored KernelSU-Next: using fixed version metadata"
+          fi
           echo -e "\nKernelSU Type Root Implementation version: $KERNELSU_TYPE_ROOT_IMPL_VERSION\n"
           echo -e "KERNELSU_TYPE_ROOT_IMPL_VERSION=$KERNELSU_TYPE_ROOT_IMPL_VERSION" >> $GITHUB_OUTPUT
           cd scripts
