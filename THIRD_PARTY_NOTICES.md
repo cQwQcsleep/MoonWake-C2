@@ -85,7 +85,16 @@
 - 本仓库位置：`fs/f2fs/compress_lz4kd.c`、`fs/f2fs/compress_oplus.c`、`fs/f2fs/compress_zstdn.c`、`fs/f2fs/compress_ops.h`
 - 状态：明确
 
-## 8. 其他
+## 8. KernelPatch
+
+- 来源：`bmax121/KernelPatch`
+- 版本：0.13.9
+- 许可证：GPL-2.0
+- 本仓库位置：`kernelpatch/kptools-linux`、`kernelpatch/kpimg-android`
+- 用途：C2K 构建时给内核 Image 打补丁，提供 `.kpm` 模块加载能力
+- 状态：明确
+
+## 9. 其他
 
 - `ci/`、`configs/`、README、构建脚本：本项目原创，GPL-2.0-only
 - 如有遗漏或错误，请通过 Issue 指出；如你是权利持有人并认为某项 inclusion 未经授权，请联系维护者，我们会移除或替换相关代码。

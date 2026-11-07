@@ -1,0 +1,18 @@
+KernelPatch binaries
+====================
+
+Source: https://github.com/bmax121/KernelPatch
+Version: 0.13.9
+License: GPL-2.0
+
+Files:
+- kptools-linux   (host tool, patches the built kernel Image)
+- kpimg-android   (payload injected into the kernel Image)
+
+Used by configs/release/compression-c2k.json to produce the KPM-capable image.
+Default superkey for the C2K build is "MoonWake-C2K" and is written into the
+image; it can be reset later with:
+
+  kptools-linux -r -i <boot-or-Image> -o <output>
+
+See THIRD_PARTY_NOTICES.md for details.

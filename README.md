@@ -69,6 +69,17 @@ adb shell su -c 'cat /sys/fs/f2fs/dm-10/features'
 
 F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
+## KPM 版本（C2K）
+
+`configs/release/compression-c2k.json` 在 C2 的基础上，构建后用 KernelPatch 0.13.9 给内核 Image 打补丁，用于加载 `.kpm` 模块。
+
+- 保留 KernelSU-Next + SuSFS
+- kptools / kpimg 已放在 `kernelpatch/`，构建时直接使用
+- superkey：`MoonWake-C2K`（公开固定值，可用 `kptools -r` 重置）
+- 产物：`MoonWake_2.7.0_C2K_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2K`
+
+KernelPatch 自带一套 SU，与 KernelSU 同时存在可能冲突，需实机验证。
+
 ## 与上游关系
 
 基于 MoonWake 上游 `73774526`（2.7.0）。
