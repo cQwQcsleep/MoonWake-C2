@@ -486,29 +486,13 @@ jobs:
         if: ${{ env.useKernelPatch == 'true' }}
         env:
           APATCH_KEY: ${{ secrets.APATCH_KEY }}
-          KP_SKEY_DEFAULT: "MoonWake-C2K"
         run: |
           mkdir kernel_patch_processing
           cd kernel_patch_processing
-          if [ -x "$GITHUB_WORKSPACE/kernelpatch/kptools-linux" ]; then
-            cp "$GITHUB_WORKSPACE/kernelpatch/kptools-linux" ./kptools-linux
-            echo "kptools: vendored"
-          else
-            curl -L -o kptools-linux https://github.com/bmax121/KernelPatch/releases/download/0.13.9/kptools-linux
-            echo "kptools: downloaded"
-          fi
-          if [ "${{ env.kpKpimgLink }}" = "local" ]; then
-            cp "$GITHUB_WORKSPACE/kernelpatch/kpimg-android" ./kpimg-android
-            echo "kpimg: vendored"
-          else
-            curl -L -o kpimg-android "${{ env.kpKpimgLink }}"
-            echo "kpimg: downloaded"
-          fi
+          curl -L -o kptools-linux https://github.com/bmax121/KernelPatch/releases/download/0.11.3/kptools-linux
+          curl -L -o kpimg-android ${{ env.kpKpimgLink }}
           chmod +x ./kptools-linux
-          SKEY="${APATCH_KEY:-$KP_SKEY_DEFAULT}"
-          ./kptools-linux -p -s "$SKEY" -i ../out_kernel/Image -k kpimg-android -o ./oImage
-          ./kptools-linux -l -i ./oImage > kpatch-info.txt || true
-          cat kpatch-info.txt
+          ./kptools-linux -p -s "$APATCH_KEY" -i ../out_kernel/Image -k kpimg-android -o ./oImage
           rm -rf ../out_kernel/Image
           mv ./oImage ../out_kernel/Image
       - name: "Pack AnyKernel3.zip"

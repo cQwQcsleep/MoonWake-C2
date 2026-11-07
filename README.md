@@ -69,28 +69,6 @@ adb shell su -c 'cat /sys/fs/f2fs/dm-10/features'
 
 F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
-## KPM 版本（C2K）
-
-`configs/release/compression-c2k.json` 在 C2 的基础上，构建后用 KernelPatch 0.13.9 给内核 Image 打补丁，用于加载 `.kpm` 模块。
-
-- 保留 KernelSU-Next + SuSFS
-- kptools / kpimg 已放在 `kernelpatch/`，构建时直接使用
-- superkey：`MoonWake-C2K`（公开固定值，可用 `kptools -r` 重置）
-- 产物：`MoonWake_2.7.0_C2K_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2K`
-
-KernelPatch 自带一套 SU，与 KernelSU 同时存在可能冲突，需实机验证。
-
-## KPM 版本（C2KN）
-
-`configs/release/compression-c2kn.json` 在 C2 的基础上补开 kprobe 相关项，用于运行 KPatch-Next 这类**独立 KPM 运行时**，不往内核 Image 里嵌入 KernelPatch。
-
-- 额外配置：`CONFIG_KPROBES`、`CONFIG_KPROBE_EVENTS`、`CONFIG_BPF_EVENTS`
-- 保持 `CONFIG_KSU_MANUAL_HOOK=y`、`CONFIG_KSU_KPROBES_HOOK=n`，避免 KSU 改走 kprobe hook
-- 不打 kernel patch，superkey 无关
-- 产物：`MoonWake_2.7.0_C2KN_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2KN`
-
-需要注意：开启 KPROBES 会增加内核攻击面，且 C3P 的 PathMask 也是在开启 kprobe 类钩子后出现开机异常，C2KN 需实机验证。
-
 ## 与上游关系
 
 基于 MoonWake 上游 `73774526`（2.7.0）。
