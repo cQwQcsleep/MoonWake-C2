@@ -7,18 +7,14 @@
       "defconfig": "ruby_defconfig",
       "extraConfig": "vendor/bbr.config vendor/noop.config vendor/kernelsu.config vendor/susfs.config vendor/kernelpatch.config vendor/zram_compress.config vendor/hybridmount.config vendor/gaming_balanced.config vendor/compression.config vendor/logging-hm.config",
       "repo": "https://github.com/cQwQcsleep/MoonWake-C2",
-      "branch": "c2",
-      "kp": {
-        "use": true,
-        "kpimg_link": "local"
-      }
+      "branch": "c2"
     },
     "output_image": "Image.gz-dtb",
     "additional_script_link": "https://raw.githubusercontent.com/cQwQcsleep/MoonWake-C2/c2/ci/version-mwk.sh",
     "additional_post_script_link": "disabled",
     "kp": {
-      "use": false,
-      "kpimg_link": ""
+      "use": true,
+      "kpimg_link": "local"
     },
     "kernelsu": {
       "enable": true,
