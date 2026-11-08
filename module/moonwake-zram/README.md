@@ -62,8 +62,8 @@ pnpm build      # 输出到 ../webroot
 ## 打包
 
 ```bash
-cd module
-zip -r ../moonwake-zram.zip moonwake-zram -x "moonwake-zram/webui/*"
+cd module/moonwake-zram
+zip -r ../moonwake-zram-v1.0.0.zip . -x "webui/*"
 ```
 
 `webui/` 只是源码，不必打进模块包。
@@ -73,7 +73,7 @@ zip -r ../moonwake-zram.zip moonwake-zram -x "moonwake-zram/webui/*"
 WebUI 的页面外壳、MD3 主题变量、Snackbar 组件和 Material Symbols 字体取自
 [Tricky Addon - Update Target List](https://github.com/KOWX712/Tricky-Addon-Update-Target-List)
 （Apache-2.0），组件使用 [@material/web](https://github.com/material-components/material-web)
-（Apache-2.0）。许可证副本见 `webui/LICENSE-APACHE-2.0`。
+（Apache-2.0）。许可证副本见 `LICENSE-APACHE-2.0`。
 
 ## 说明
 

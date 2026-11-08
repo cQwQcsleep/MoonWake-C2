@@ -141,3 +141,6 @@ MoonWake-Private-*
 ksu.sh
 KernelSU/
 setup.sh
+
+# KernelSU module package
+module/*.zip

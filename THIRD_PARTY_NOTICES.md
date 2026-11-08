@@ -91,7 +91,7 @@
 Material Symbols 字体取自：
 
 - Tricky Addon - Update Target List，<https://github.com/KOWX712/Tricky-Addon-Update-Target-List>
-- 许可证：Apache-2.0，许可证副本见 `module/moonwake-zram/webui/LICENSE-APACHE-2.0`
+- 许可证：Apache-2.0，许可证副本见 `module/moonwake-zram/LICENSE-APACHE-2.0`
 
 WebUI 组件库为 `@material/web`（Apache-2.0）：<https://github.com/material-components/material-web>。
 
