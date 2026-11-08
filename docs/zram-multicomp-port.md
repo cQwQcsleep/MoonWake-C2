@@ -9,7 +9,7 @@
 |---|---|
 | 每页算法记录 | 存在 `table[index].flags` 的 bit30–31，不额外占表内存 |
 | 主算法 | 新写入固定用 `comp_algorithm`，C2P/C2PN 内核默认 `lz4kd` |
-| 次算法 | `recomp_algorithm`，必须在 `disksize` 之前设置 |
+| 次算法 | 默认自动使用 `zstdn`；需要改则在 `disksize` 之前写 `recomp_algorithm`，写 `none` 可关闭 |
 | 手动重压缩 | `echo 1 > /sys/block/zramX/recompress` |
 | 自动重压缩 | 内核 delayed_work 按压力与冷热自动执行，默认开启 |
 | 读路径 | 按每页记录的算法解压，切换算法不会读错历史页 |
@@ -48,14 +48,13 @@
 
 ## 使用
 
-```bash
-# 次算法必须在 disksize 之前
-echo zstdn > /sys/block/zram0/recomp_algorithm
+默认零配置：内核在 `disksize` 时自动创建 `lz4kd`（主）+ `zstdn`（次）。
 
-# 主算法与容量
-echo lz4kd > /sys/block/zram0/comp_algorithm
-echo 3G    > /sys/block/zram0/disksize
-swapon /dev/block/zram0
+想换次算法时才需要手动写，且必须在 `disksize` 之前：
+
+```bash
+echo lz4k_oplus > /sys/block/zram0/recomp_algorithm   # 可选
+echo none       > /sys/block/zram0/recomp_algorithm   # 关闭自动重压缩
 ```
 
 之后不用管，内存紧张时内核自己重压缩。可观测：

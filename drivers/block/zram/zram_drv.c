@@ -1125,7 +1125,8 @@ static ssize_t recomp_algorithm_store(struct device *dev,
 	}
 
 	if (!strcmp(compressor, "none"))
-		zram->recompressor[0] = 0;
+		strlcpy(zram->recompressor, "none",
+				sizeof(zram->recompressor));
 	else
 		strcpy(zram->recompressor, compressor);
 
@@ -1283,6 +1284,8 @@ static ssize_t recompress_store(struct device *dev,
 #define ZRAM_RECOMP_CRITICAL_PCT	6
 /* abort a pass when more than this percentage of pages is read back */
 #define ZRAM_RECOMP_REFAULT_PCT		10
+/* secondary algorithm used when userspace did not pick one */
+#define ZRAM_RECOMP_DEFAULT_ALGO	"zstdn"
 
 static void zram_recomp_schedule(struct zram *zram, unsigned int msecs)
 {
@@ -2276,7 +2279,20 @@ static ssize_t disksize_store(struct device *dev,
 	zram->comps[zram->nr_comps++] = comp;
 	zram->comp = comp;
 
-	if (zram->recompressor[0]) {
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	/*
+	 * Zero-config default: if userspace did not pick a secondary
+	 * algorithm, fall back to zstdn so background recompression works
+	 * out of the box. Writing "none" opts out.
+	 */
+	if (!zram->recompressor[0] &&
+			zcomp_available_algorithm(ZRAM_RECOMP_DEFAULT_ALGO))
+		strlcpy(zram->recompressor, ZRAM_RECOMP_DEFAULT_ALGO,
+				sizeof(zram->recompressor));
+#endif
+
+	if (zram->recompressor[0] &&
+			strcmp(zram->recompressor, "none")) {
 		comp = zcomp_create(zram->recompressor);
 		if (IS_ERR(comp)) {
 			pr_err("Cannot initialise %s recompressing backend\n",
