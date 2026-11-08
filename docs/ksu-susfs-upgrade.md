@@ -30,6 +30,18 @@ SUS_SU
 - 若使用 overlayfs 类模块，`SUS_OVERLAYFS` 的隐藏不会生效
 - `SUS_SU` 在非 GKI 上游已弃用，保持 n 是正确的
 
+## 已核对的现状（2026-11）
+
+| 检查 | 结果 |
+|---|---|
+| 我们 fork 的 `legacy-susfs-v2-susmount` 远端 HEAD | `75143d56` |
+| 仓库内 vendored 副本 | `75143d56`，与远端一致，没有落后提交 |
+| 上游 `KernelSU-Next` 最新 Release | `v3.4.2`（2026-10-13） |
+| 上游形态 | `kernel/susfs/` 为 LKM 形态，与本仓库内置形态不同，不能直接照搬 |
+| SuSFS 版本 | v2.3.0，与上游 `susfs_abi.h` 的 ABI 一致 |
+
+结论：**当前没有可直接 pull 的更新**。升级的唯一价值是拿到 v3.4.x 的新特性（LKM dead man's switch、open_redirect scheme 4、时间侧信道修复），代价是要把内置形态重新对齐，属于重构而不是升级。
+
 ## 升级步骤（建议单独分支）
 
 1. 建分支 `next-susfs-upgrade`，不直接改 `c2`

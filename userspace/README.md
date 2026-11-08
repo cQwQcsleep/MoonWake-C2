@@ -40,9 +40,9 @@ chmod 0755 /data/adb/service.d/zz-moonwake-tuning.sh
 
 ## mwk-tuning.sh
 
-运行时调优已经做进内核（仅 C2P），这个脚本只做**只读核对**，不修改任何值：
+内核侧只保留了两项默认值（仅 C2P），MGLRU 与 C2 保持一致（`min_ttl_ms=0`）。这个脚本只做**只读核对**，不修改任何值：
 
-- `lru_gen.min_ttl_ms`（C2P 内核默认 1000）
+- `lru_gen.min_ttl_ms`（C2 与 C2P 都是 0；可运行时手动调）
 - F2FS `readdir_ra`（f2fs 本身默认 1）、`gc_urgent`
 - `kernel.dmesg_restrict`（C2P 通过 `CONFIG_SECURITY_DMESG_RESTRICT` 默认 1）
 - SELinux 当前模式
@@ -54,10 +54,10 @@ chmod 0755 /data/adb/service.d/zz-moonwake-tuning.sh
 
 | 项 | 位置 |
 |---|---|
-| MGLRU 1000ms 默认 | `mm/vmscan.c` 的 `lru_gen_min_ttl`，由 `CONFIG_MWK_PERF_PROFILE` 控制 |
-| SuSFS 挂载隐藏默认开启 | `fs/susfs.c` 的 `susfs_init()`，同一开关 |
+| SuSFS 挂载隐藏默认开启 | `fs/susfs.c` 的 `susfs_init()`，由 `CONFIG_MWK_PERF_PROFILE` 控制 |
 | `dmesg_restrict=1` | C2P 片段里的 `CONFIG_SECURITY_DMESG_RESTRICT=y` |
 | F2FS `readdir_ra=1` | f2fs 上游默认已是 1，无需改 |
+| MGLRU `min_ttl_ms` | 与 C2 一致，默认 0，需要时运行时写 sysfs |
 
 ## 热管理与 GPU
 

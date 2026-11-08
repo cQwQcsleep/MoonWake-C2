@@ -76,7 +76,8 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 - 关闭 `KALLSYMS_ALL`、`IKCONFIG_PROC`、`UNMAP_KERNEL_AT_EL0`（KPTI）
 - 打开 `NET_SCH_FQ` / `NET_SCH_FQ_CODEL`，配合已有的 BBR
 - 打开 `SECURITY_DMESG_RESTRICT`，`kernel.dmesg_restrict` 默认 1
-- 内核里默认 MGLRU `min_ttl_ms=1000`、SuSFS 挂载对非 su 进程隐藏
+- 内核里默认让 SuSFS 对非 su 进程隐藏挂载
+- MGLRU `min_ttl_ms` 与 C2 一致，保持 0
 - 仅在 C2P 下把 `hybridmount_` 前缀加入 kallsyms 隐藏列表
 - MTK `ANDROID_DEFAULT_SETTING` 的 `select` 用新符号 `CONFIG_MWK_PERF_PROFILE` 做开关，未开启时行为与 C2 完全一致
 - 保留 `logging-hm.config` 的全部日志项、F2FS 压缩与 `ZRAM_WRITEBACK`（均与 C2 一致）
@@ -87,11 +88,15 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 ## 设备端脚本与文档
 
 - `userspace/zram.sh`：zram 算法/容量 + loop 文件回写（`post-fs-data.d`）
-- `userspace/mwk-tuning.sh`：MGLRU、F2FS `readdir_ra`、`dmesg_restrict`、SELinux 检查、SuSFS 挂载隐藏（`service.d`）
+- `userspace/mwk-tuning.sh`：只读核对 MGLRU、F2FS `readdir_ra`、`dmesg_restrict`、SELinux、SuSFS
 - `userspace/README.md`：安装方式与可调变量
 - `docs/cve-process.md`：4.19 CVE 每月挑拣流程
+- `docs/cve/`：按月记录（`2026-11.md` 为当月模板）
 - `docs/ksu-susfs-upgrade.md`：KSU-Next / SuSFS 升级评估与死符号清单
 - `docs/zram-multicomp-port.md`：ZRAM MULTI_COMP 回移评估
+- `docs/f2fs-compression.md`：F2FS 压缩白名单与挂载参数
+- `docs/thermal-gpu.md`：热管理与 GED 调参
+- `docs/lz4-image.md`：LZ4 内核镜像实验
 
 ## 与上游关系
 
