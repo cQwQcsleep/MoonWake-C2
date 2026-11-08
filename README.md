@@ -73,11 +73,11 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 `configs/release/compression-c2p.json` 是 C2 的性能向变体，只改配置与一处符号过滤，不动功能集。
 
-- 关闭 `KALLSYMS_ALL`、`IKCONFIG_PROC`、`UNMAP_KERNEL_AT_EL0`（KPTI）、`ZRAM_WRITEBACK`、`F2FS_FS_COMPRESSION_ALL`、`F2FS_STAT_FS`
+- 关闭 `KALLSYMS_ALL`、`IKCONFIG_PROC`、`UNMAP_KERNEL_AT_EL0`（KPTI）
 - 打开 `NET_SCH_FQ` / `NET_SCH_FQ_CODEL`，配合已有的 BBR
-- `hybridmount_` 前缀加入 kallsyms 隐藏列表
+- 仅在 C2P 下把 `hybridmount_` 前缀加入 kallsyms 隐藏列表
 - MTK `ANDROID_DEFAULT_SETTING` 的 `select` 用新符号 `CONFIG_MWK_PERF_PROFILE` 做开关，未开启时行为与 C2 完全一致
-- 保留 `logging-hm.config` 的全部日志项
+- 保留 `logging-hm.config` 的全部日志项、F2FS 压缩与 `ZRAM_WRITEBACK`（均与 C2 一致）
 - 产物：`MoonWake_2.7.0_C2P_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2P`
 
 本变体尚未构建，也未在真机验证。
