@@ -3,7 +3,9 @@ import { onMounted, ref } from "vue";
 import {
   MiuixButton,
   MiuixCard,
+  MiuixDivider,
   MiuixSmallTitle,
+  MiuixText,
   showSnackbar,
 } from "miuix-vue";
 import { applyConf, getLogs, recompress, writeback } from "../lib/api";
@@ -39,22 +41,23 @@ onMounted(refresh);
   <div class="page">
     <MiuixSmallTitle text="操作" />
     <MiuixCard class="mw-card card-gap">
-      <div style="padding: 12px; display: flex; flex-wrap: wrap; gap: 12px">
+      <div class="button-row">
         <MiuixButton type="primary" @click="doRecompress">立即重压缩</MiuixButton>
         <MiuixButton @click="doWriteback">空闲回写</MiuixButton>
         <MiuixButton @click="doApply">应用配置</MiuixButton>
+      </div>
+      <MiuixDivider />
+      <div class="button-row">
+        <MiuixText class="hint">重压缩只处理冷页，可随时中断</MiuixText>
+        <MiuixButton @click="refresh">刷新日志</MiuixButton>
       </div>
     </MiuixCard>
 
     <MiuixSmallTitle text="日志" />
     <MiuixCard class="mw-card card-gap">
-      <div style="padding: 12px">
-        <div class="mono">{{ logs || "暂无日志" }}</div>
+      <div class="log-box">
+        <MiuixText class="mono">{{ logs || "暂无日志" }}</MiuixText>
       </div>
     </MiuixCard>
-
-    <div style="padding: 12px; display: flex">
-      <MiuixButton @click="refresh">刷新日志</MiuixButton>
-    </div>
   </div>
 </template>
