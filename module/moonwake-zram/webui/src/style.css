@@ -20,8 +20,9 @@ body {
   height: 100%;
 }
 
+/* MIUIX Scaffold containerColor = colorScheme.surface */
 body {
-  background: var(--m-color-background);
+  background: var(--m-color-surface);
   color: var(--m-color-on-background);
 }
 
@@ -47,16 +48,18 @@ body {
 }
 
 .page {
-  padding: 0 12px 24px;
+  padding: 0 12px 16px;
 }
 
-.mw-card {
-  --m-card-color: var(--m-color-surface-container);
-}
-
+/* MIUIX CardDefaults.CornerRadius = 16dp, squircle contour like compose-miuix */
 .mw-card .m-card {
-  border-radius: 22px;
+  border-radius: var(--m-radius-md, 16px);
   corner-shape: squircle;
+}
+
+/* HyperIsland SectionTitle: insideMargin 18dp / 8dp */
+.page .m-small-title {
+  padding: 8px 18px;
 }
 
 @keyframes mw-card-in {
@@ -100,6 +103,58 @@ button:active,
   margin-bottom: 12px;
 }
 
+/* HyperIsland StatCard: 13sp label + 24sp semibold value, 14dp padding */
+.stat-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat > .m-card {
+  padding: 14px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+/* HyperIsland InfoCard: stacked 17sp label + 14sp summary, 16dp padding */
+.info-card > .m-card {
+  padding: 16px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info + .info {
+  margin-top: 20px;
+}
+
+.info__value {
+  overflow-wrap: anywhere;
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.action-list .m-button {
+  width: 100%;
+}
+
 .row-pad {
   padding: 12px;
   display: flex;
@@ -132,7 +187,7 @@ button:active,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 20px;
+  padding: 16px;
 }
 
 .hero__text {
@@ -142,21 +197,21 @@ button:active,
 
 .hero__label {
   color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  font-size: var(--m-text-body2-size, 14px);
 }
 
 .hero__value {
   color: #fff;
-  font-size: 30px;
-  font-weight: 650;
-  line-height: 1.2;
+  font-size: var(--m-text-title1-size, 32px);
+  font-weight: 590;
+  line-height: 1.15;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
 
 .hero__sub {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
+  font-size: var(--m-text-footnote1-size, 13px);
   margin-top: 4px;
 }
 
@@ -193,7 +248,7 @@ button:active,
 }
 
 .slider-wrap {
-  padding: 4px 20px 16px;
+  padding: 4px 16px 16px;
 }
 
 .input-row {

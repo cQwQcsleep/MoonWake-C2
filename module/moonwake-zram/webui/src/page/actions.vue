@@ -41,7 +41,7 @@ onMounted(refresh);
   <div class="page">
     <MiuixSmallTitle text="操作" />
     <MiuixCard class="mw-card card-gap">
-      <div class="button-row">
+      <div class="action-list">
         <MiuixButton type="primary" @click="doRecompress">立即重压缩</MiuixButton>
         <MiuixButton @click="doWriteback">空闲回写</MiuixButton>
         <MiuixButton @click="doApply">应用配置</MiuixButton>

@@ -24,7 +24,7 @@ const active = computed(() => pages[index.value]);
 <template>
   <div class="app">
     <MiuixScrollArea class="app__body">
-      <MiuixTopAppBar :large="false" :title="titles[index]" />
+      <MiuixTopAppBar :title="titles[index]" />
       <Transition name="page" mode="out-in">
         <KeepAlive>
           <component :is="active" :key="index" />
