@@ -82,6 +82,15 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 本变体尚未构建，也未在真机验证。
 
+## 设备端脚本与文档
+
+- `userspace/zram.sh`：zram 算法/容量 + loop 文件回写（`post-fs-data.d`）
+- `userspace/mwk-tuning.sh`：MGLRU、F2FS `readdir_ra`、`dmesg_restrict`、SELinux 检查、SuSFS 挂载隐藏（`service.d`）
+- `userspace/README.md`：安装方式与可调变量
+- `docs/cve-process.md`：4.19 CVE 每月挑拣流程
+- `docs/ksu-susfs-upgrade.md`：KSU-Next / SuSFS 升级评估与死符号清单
+- `docs/zram-multicomp-port.md`：ZRAM MULTI_COMP 回移评估
+
 ## 与上游关系
 
 基于 MoonWake 上游 `73774526`（2.7.0）。
