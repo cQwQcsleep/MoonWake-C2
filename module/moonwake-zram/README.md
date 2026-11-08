@@ -68,6 +68,13 @@ zip -r ../moonwake-zram.zip moonwake-zram -x "moonwake-zram/webui/*"
 
 `webui/` 只是源码，不必打进模块包。
 
+## 界面来源
+
+WebUI 的页面外壳、MD3 主题变量、Snackbar 组件和 Material Symbols 字体取自
+[Tricky Addon - Update Target List](https://github.com/KOWX712/Tricky-Addon-Update-Target-List)
+（Apache-2.0），组件使用 [@material/web](https://github.com/material-components/material-web)
+（Apache-2.0）。许可证副本见 `webui/LICENSE-APACHE-2.0`。
+
 ## 说明
 
 - 4.19 的 `comp_algorithm` 只能在未初始化时修改，改算法会重建 zram，当前 swap 内容会丢

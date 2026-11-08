@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { snackbar } from "mdui/functions/snackbar.js";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { applyConf, getStatus, saveConf } from "../lib/api";
 import { ALGOS } from "../lib/types";
+import { toast } from "../lib/toast";
 
 const pct = ref(50);
 const algo = ref("lz4kd");
@@ -13,6 +13,10 @@ const backingMb = ref("2048");
 const wbLimitMb = ref("1024");
 
 const recompItems = ["zstdn", "zstd", "lz4k_oplus", "none"];
+
+type SelectEl = HTMLElement & { value: string };
+const algoSel = ref<SelectEl | null>(null);
+const recompSel = ref<SelectEl | null>(null);
 
 const capacityMb = computed(() => Math.round((8 * 1024 * pct.value) / 100));
 
@@ -29,11 +33,11 @@ function onRecomp(e: Event) {
 }
 
 function onAuto(e: Event) {
-  auto.value = (e.target as HTMLElement & { checked: boolean }).checked;
+  auto.value = (e.target as HTMLElement & { selected: boolean }).selected;
 }
 
 function onWb(e: Event) {
-  wb.value = (e.target as HTMLElement & { checked: boolean }).checked;
+  wb.value = (e.target as HTMLElement & { selected: boolean }).selected;
 }
 
 function onBacking(e: Event) {
@@ -53,6 +57,9 @@ onMounted(async () => {
   wb.value = !!s.conf.writeback;
   backingMb.value = String(s.conf.backing_mb);
   wbLimitMb.value = String(s.conf.wb_limit_mb);
+  await nextTick();
+  if (algoSel.value) algoSel.value.value = algo.value;
+  if (recompSel.value) recompSel.value.value = recomp.value;
 });
 
 async function save() {
@@ -66,116 +73,108 @@ async function save() {
     wb_limit_mb: Number(wbLimitMb.value),
   });
   await applyConf();
-  snackbar({ message: "已保存并应用" });
+  toast.show("已保存并应用");
 }
 </script>
 
 <template>
   <div class="page">
     <section class="section">
-      <h2 class="md-title-small section__title">容量</h2>
-      <div class="group">
-        <div class="row">
-          <span class="md-body-large row__key">交换区大小</span>
-          <span class="md-body-medium row__value">
+      <h2 class="section-title t-title-sm">容量</h2>
+      <div class="card field">
+        <div class="field__head">
+          <span class="t-body-lg">交换区大小</span>
+          <span class="t-body field__value">
             {{ pct }}% · 约 {{ capacityMb }} MB
           </span>
         </div>
-        <div class="slider-wrap">
-          <mdui-slider
-            :value="pct"
-            :min="20"
-            :max="80"
-            :step="5"
-            @input="onPct"
-          />
-        </div>
-        <p class="md-body-small helper">
-          修改容量会重建 zram，当前 swap 内容会被清空。
-        </p>
+        <md-slider
+          :value="pct"
+          :min="20"
+          :max="80"
+          :step="5"
+          @input="onPct"
+        ></md-slider>
+        <p class="t-body-sm helper">修改容量会重建 zram，当前 swap 内容会被清空。</p>
       </div>
     </section>
 
     <section class="section">
-      <h2 class="md-title-small section__title">算法</h2>
+      <h2 class="section-title t-title-sm">算法</h2>
       <div class="group">
-        <div class="field-wrap">
-          <mdui-select
-            variant="outlined"
+        <div class="field">
+          <md-outlined-select
+            ref="algoSel"
             label="主算法"
             :value="algo"
             @change="onAlgo"
           >
-            <mdui-menu-item v-for="a in ALGOS" :key="a" :value="a">
-              {{ a }}
-            </mdui-menu-item>
-          </mdui-select>
+            <md-select-option v-for="a in ALGOS" :key="a" :value="a">
+              <div slot="headline">{{ a }}</div>
+            </md-select-option>
+          </md-outlined-select>
         </div>
-        <div class="field-wrap">
-          <mdui-select
-            variant="outlined"
+        <div class="field">
+          <md-outlined-select
+            ref="recompSel"
             label="次算法"
-            helper="冷页重压缩使用"
+            supporting-text="冷页重压缩使用"
             :value="recomp"
             @change="onRecomp"
           >
-            <mdui-menu-item v-for="a in recompItems" :key="a" :value="a">
-              {{ a === "none" ? "关闭" : a }}
-            </mdui-menu-item>
-          </mdui-select>
+            <md-select-option v-for="a in recompItems" :key="a" :value="a">
+              <div slot="headline">{{ a === "none" ? "关闭" : a }}</div>
+            </md-select-option>
+          </md-outlined-select>
         </div>
-        <div class="switch-row">
-          <span class="switch-row__text">
-            <span class="md-body-large">自动重压缩</span>
-            <span class="md-body-medium switch-row__desc">
-              内存紧张时由内核自动执行
-            </span>
+        <div class="row">
+          <span class="row__text">
+            <span class="t-body-lg">自动重压缩</span>
+            <span class="t-body helper">内存紧张时由内核自动执行</span>
           </span>
-          <mdui-switch
+          <md-switch
             aria-label="自动重压缩"
-            :checked="auto"
+            :selected="auto"
             @change="onAuto"
-          />
+          ></md-switch>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <h2 class="md-title-small section__title">回写</h2>
+      <h2 class="section-title t-title-sm">回写</h2>
       <div class="group">
-        <div class="switch-row">
-          <span class="switch-row__text">
-            <span class="md-body-large">启用回写</span>
-            <span class="md-body-medium switch-row__desc">
-              将冷页写入 backing 文件
-            </span>
+        <div class="row">
+          <span class="row__text">
+            <span class="t-body-lg">启用回写</span>
+            <span class="t-body helper">将冷页写入 backing 文件</span>
           </span>
-          <mdui-switch aria-label="启用回写" :checked="wb" @change="onWb" />
+          <md-switch
+            aria-label="启用回写"
+            :selected="wb"
+            @change="onWb"
+          ></md-switch>
         </div>
         <div class="field-row">
-          <mdui-text-field
-            variant="outlined"
+          <md-outlined-text-field
             type="number"
             label="backing 文件 MB"
             :value="backingMb"
             @input="onBacking"
-          />
-          <mdui-text-field
-            variant="outlined"
+          ></md-outlined-text-field>
+          <md-outlined-text-field
             type="number"
             label="回写上限 MB"
             :value="wbLimitMb"
             @input="onWbLimit"
-          />
+          ></md-outlined-text-field>
         </div>
       </div>
     </section>
 
     <div class="save">
-      <mdui-button variant="filled" full-width @click="save">
-        保存并应用
-      </mdui-button>
-      <span class="md-body-small helper">保存后立即应用到 zram0</span>
+      <md-filled-button @click="save">保存并应用</md-filled-button>
+      <span class="t-body-sm helper">保存后立即应用到 zram0</span>
     </div>
   </div>
 </template>

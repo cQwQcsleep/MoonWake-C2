@@ -1,23 +1,12 @@
+import { exec, isKsuWebui } from "kernelsu-alt";
 import type { Conf, Status } from "./types";
 
 const BIN = "/data/adb/modules/moonwake-zram/bin/mwk-zram";
 
-declare global {
-  interface Window {
-    ksu?: {
-      exec: (
-        cmd: string,
-        opts?: Record<string, unknown>,
-      ) => Promise<{ errno: number; stdout: string; stderr: string }>;
-    };
-  }
-}
-
-export const isReal = () => !!window.ksu;
+export const isReal = () => isKsuWebui();
 
 async function run(cmd: string): Promise<string> {
-  if (!window.ksu) throw new Error("not in KernelSU WebUI");
-  const res = await window.ksu.exec(cmd, { cwd: "/" });
+  const res = await exec(cmd, { cwd: "/" });
   return res.stdout || "";
 }
 

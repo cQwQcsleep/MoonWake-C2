@@ -85,7 +85,17 @@
 - 本仓库位置：`fs/f2fs/compress_lz4kd.c`、`fs/f2fs/compress_oplus.c`、`fs/f2fs/compress_zstdn.c`、`fs/f2fs/compress_ops.h`
 - 状态：明确
 
-## 8. 其他
+## 8. KernelSU 模块 WebUI 模板
+
+`module/moonwake-zram/webui` 的页面外壳、MD3 主题变量（`theme.scss`）、Snackbar 组件和
+Material Symbols 字体取自：
+
+- Tricky Addon - Update Target List，<https://github.com/KOWX712/Tricky-Addon-Update-Target-List>
+- 许可证：Apache-2.0，许可证副本见 `module/moonwake-zram/webui/LICENSE-APACHE-2.0`
+
+WebUI 组件库为 `@material/web`（Apache-2.0）：<https://github.com/material-components/material-web>。
+
+## 9. 其他
 
 - `ci/`、`configs/`、README、构建脚本：本项目原创，GPL-2.0-only
 - 如有遗漏或错误，请通过 Issue 指出；如你是权利持有人并认为某项 inclusion 未经授权，请联系维护者，我们会移除或替换相关代码。
