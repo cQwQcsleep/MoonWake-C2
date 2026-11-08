@@ -143,11 +143,17 @@ status() {
     memused=$(echo "$mm" | awk '{print $3}')
 
     bd=$(cat "$ZRAM_SYS/bd_stat" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g')
+    bd_count=$(echo "$bd" | awk '{print $1+0}')
+    bd_reads=$(echo "$bd" | awk '{print $2+0}')
+    bd_writes=$(echo "$bd" | awk '{print $3+0}')
+
+    avail_kb=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
+    lru_ttl=$(cat /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null || echo 0)
 
     last=$(dmesg 2>/dev/null | grep "recompressed" | tail -1 | sed 's/.*zram0: //')
 
     cat <<EOF
-{"kernel":"$(uname -r)","init":$initstate,"disksize":$disksize,"orig":${orig:-0},"compr":${compr:-0},"memused":${memused:-0},"algo":"$algo","recomp_algo":"$recomp","auto_recomp":$auto,"backing":"$backing","bd":"$bd","last":"$last","conf":{"disksize_pct":$disksize_pct,"algo":"$algo","recomp_algo":"$recomp_algo","auto_recomp":$auto_recomp,"writeback":$writeback,"backing_mb":$backing_mb,"wb_limit_mb":$wb_limit_mb}}
+{"kernel":"$(uname -r)","init":$initstate,"disksize":$disksize,"orig":${orig:-0},"compr":${compr:-0},"memused":${memused:-0},"algo":"$algo","recomp_algo":"$recomp","auto_recomp":$auto,"backing":"$backing","bd":"$bd","bd_count":$bd_count,"bd_reads":$bd_reads,"bd_writes":$bd_writes,"avail_kb":${avail_kb:-0},"lru_ttl":$lru_ttl,"last":"$last","conf":{"disksize_pct":$disksize_pct,"algo":"$algo","recomp_algo":"$recomp_algo","auto_recomp":$auto_recomp,"writeback":$writeback,"backing_mb":$backing_mb,"wb_limit_mb":$wb_limit_mb}}
 EOF
 }
 

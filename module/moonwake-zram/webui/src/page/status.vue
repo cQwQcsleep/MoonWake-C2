@@ -72,6 +72,22 @@ onMounted(async () => {
       </MiuixBasicComponent>
     </MiuixCard>
 
+    <MiuixSmallTitle text="内存与回收" />
+    <MiuixCard class="mw-card card-gap">
+      <MiuixBasicComponent
+        title="可用内存"
+        :summary="s ? `${gib(s.avail_kb * 1024)} GB` : '-'"
+      />
+      <MiuixBasicComponent
+        title="MGLRU min_ttl_ms"
+        :summary="s ? String(s.lru_ttl) : '-'"
+      />
+      <MiuixBasicComponent
+        title="回写页数"
+        :summary="s ? `${s.bd_count} 页 / 写入 ${s.bd_writes}` : '-'"
+      />
+    </MiuixCard>
+
     <MiuixSmallTitle text="运行状态" />
     <MiuixCard class="mw-card card-gap">
       <MiuixBasicComponent title="内核" :summary="s?.kernel || '-'" />

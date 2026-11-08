@@ -45,6 +45,11 @@ const mockStatus: Status = {
   auto_recomp: 1,
   backing: "none",
   bd: "",
+  bd_count: 0,
+  bd_reads: 0,
+  bd_writes: 0,
+  avail_kb: 1843200,
+  lru_ttl: 0,
   last: "recompressed 2048 pages, 12 refaults, cooldown 600000ms",
   conf: { ...mockConf },
 };

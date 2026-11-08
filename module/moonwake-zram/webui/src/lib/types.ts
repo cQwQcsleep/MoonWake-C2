@@ -10,6 +10,11 @@ export interface Status {
   auto_recomp: number;
   backing: string;
   bd: string;
+  bd_count: number;
+  bd_reads: number;
+  bd_writes: number;
+  avail_kb: number;
+  lru_ttl: number;
   last: string;
   conf: Conf;
 }
