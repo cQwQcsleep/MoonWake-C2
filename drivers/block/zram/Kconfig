@@ -56,3 +56,19 @@ config ZRAM_MULTI_COMP
 	  pages and same-filled pages are skipped.
 
 	  The secondary algorithm must be set before disksize.
+
+config ZRAM_AUTO_RECOMP
+	bool "Recompress pages in the background"
+	depends on ZRAM_MULTI_COMP
+	default y
+	help
+	  Walk the zram slots in small batches from a delayed work item and
+	  recompress pages with the secondary algorithm, without any
+	  userspace trigger.
+
+	  The scan is rate limited (a fixed batch per run) and pauses for a
+	  long time after each full pass, so it spreads the compression work
+	  instead of stalling the device. Pages stored on the backing device,
+	  huge pages and same-filled pages are skipped.
+
+	  Runtime switch: /sys/block/zramX/auto_recompress (1/0).

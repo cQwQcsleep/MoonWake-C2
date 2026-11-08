@@ -26,6 +26,7 @@ ZRAM_ALGO=${ZRAM_ALGO:-lz4kd}
 ZRAM_RECOMP_ALGO=${ZRAM_RECOMP_ALGO:-}
 ZRAM_DISKSIZE_PCT=${ZRAM_DISKSIZE_PCT:-50}
 ZRAM_ENABLE_WRITEBACK=${ZRAM_ENABLE_WRITEBACK:-1}
+ZRAM_WB_IDLE=${ZRAM_WB_IDLE:-0}
 ZRAM_BACKING_FILE=${ZRAM_BACKING_FILE:-/data/adb/zram_backing.img}
 ZRAM_BACKING_MB=${ZRAM_BACKING_MB:-2048}
 ZRAM_WB_LIMIT_MB=${ZRAM_WB_LIMIT_MB:-1024}
@@ -118,6 +119,16 @@ apply_zram() {
         echo 1 > "$ZRAM_SYS/recompress" 2>/dev/null \
             && log "recompress pass triggered" \
             || log "recompress trigger failed"
+    fi
+
+    # One-shot idle writeback: needs a marking pass first, otherwise the
+    # kernel has no idle pages to move. Off by default; C2PN's in-kernel
+    # worker handles this on its own when memory gets tight.
+    if [ "$ZRAM_WB_IDLE" = "1" ] && [ -w "$ZRAM_SYS/writeback" ]; then
+        echo all > "$ZRAM_SYS/idle" 2>/dev/null
+        echo idle > "$ZRAM_SYS/writeback" 2>/dev/null \
+            && log "idle writeback pass triggered" \
+            || log "idle writeback trigger failed"
     fi
 }
 

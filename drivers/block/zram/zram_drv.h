@@ -18,6 +18,7 @@
 #include <linux/rwsem.h>
 #include <linux/zsmalloc.h>
 #include <linux/crypto.h>
+#include <linux/workqueue.h>
 
 #include "zcomp.h"
 
@@ -102,6 +103,9 @@ struct zram_stats {
 	atomic64_t bd_reads;		/* no. of reads from backing device */
 	atomic64_t bd_writes;		/* no. of writes from backing device */
 #endif
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	atomic64_t recomp_refault;	/* reads of recompressed pages */
+#endif
 };
 
 struct zram {
@@ -127,6 +131,15 @@ struct zram {
 	struct zcomp *comps[ZRAM_MAX_COMPS];
 	unsigned int nr_comps;
 	char recompressor[CRYPTO_MAX_ALG_NAME];
+#endif
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	struct delayed_work recomp_work;
+	unsigned long recomp_cursor;
+	bool recomp_enabled;
+	unsigned int recomp_phase;
+	unsigned long recomp_idle_cursor;
+	unsigned long recomp_pass_done;
+	u64 recomp_refault_base;
 #endif
 	/*
 	 * zram is claimed so open request will be failed

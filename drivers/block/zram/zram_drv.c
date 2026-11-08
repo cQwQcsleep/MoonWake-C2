@@ -33,6 +33,9 @@
 #include <linux/sysfs.h>
 #include <linux/debugfs.h>
 #include <linux/cpuhotplug.h>
+#include <linux/mm.h>
+#include <linux/sched/loadavg.h>
+#include <linux/ktime.h>
 
 #include "zram_drv.h"
 
@@ -41,7 +44,12 @@ static DEFINE_IDR(zram_index_idr);
 static DEFINE_MUTEX(zram_index_mutex);
 
 static int zram_major;
+#ifdef CONFIG_MWK_PERF_PROFILE
+/* C2P/C2PN: lz4kd is built in and gives a much better ratio than lzo */
+static const char *default_compressor = "lz4kd";
+#else
 static const char *default_compressor = "lzo";
+#endif
 
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;
@@ -660,45 +668,37 @@ static int read_from_bdev_async(struct zram *zram, struct bio_vec *bvec,
 #define HUGE_WRITEBACK 1
 #define IDLE_WRITEBACK 2
 
-static ssize_t writeback_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t len)
+/*
+ * Write back a bounded range of slots, so both the sysfs knob and the
+ * background worker can use the same code path with different budgets.
+ * Returns the number of pages moved, and sets *next to the first index that
+ * was not scanned yet.
+ */
+static unsigned long zram_writeback_range(struct zram *zram, int mode,
+		unsigned long start, unsigned long budget, unsigned long *next)
 {
-	struct zram *zram = dev_to_zram(dev);
 	unsigned long nr_pages = zram->disksize >> PAGE_SHIFT;
-	unsigned long index;
+	unsigned long index = start, done = 0, scanned = 0;
+	unsigned long blk_idx = 0;
 	struct bio bio;
 	struct bio_vec bio_vec;
 	struct page *page;
-	ssize_t ret;
-	int mode;
-	unsigned long blk_idx = 0;
 
-	if (sysfs_streq(buf, "idle"))
-		mode = IDLE_WRITEBACK;
-	else if (sysfs_streq(buf, "huge"))
-		mode = HUGE_WRITEBACK;
-	else
-		return -EINVAL;
-
-	down_read(&zram->init_lock);
-	if (!init_done(zram)) {
-		ret = -EINVAL;
-		goto release_init_lock;
-	}
-
-	if (!zram->backing_dev) {
-		ret = -ENODEV;
-		goto release_init_lock;
+	if (start >= nr_pages) {
+		*next = nr_pages;
+		return 0;
 	}
 
 	page = alloc_page(GFP_KERNEL);
 	if (!page) {
-		ret = -ENOMEM;
-		goto release_init_lock;
+		*next = nr_pages;
+		return 0;
 	}
 
-	for (index = 0; index < nr_pages; index++) {
+	while (index < nr_pages && scanned < budget) {
 		struct bio_vec bvec;
+
+		scanned++;
 
 		bvec.bv_page = page;
 		bvec.bv_len = PAGE_SIZE;
@@ -707,17 +707,14 @@ static ssize_t writeback_store(struct device *dev,
 		spin_lock(&zram->wb_limit_lock);
 		if (zram->wb_limit_enable && !zram->bd_wb_limit) {
 			spin_unlock(&zram->wb_limit_lock);
-			ret = -EIO;
 			break;
 		}
 		spin_unlock(&zram->wb_limit_lock);
 
 		if (!blk_idx) {
 			blk_idx = alloc_block_bdev(zram);
-			if (!blk_idx) {
-				ret = -ENOSPC;
+			if (!blk_idx)
 				break;
-			}
 		}
 
 		zram_slot_lock(zram, index);
@@ -748,7 +745,7 @@ static ssize_t writeback_store(struct device *dev,
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);
 			zram_clear_flag(zram, index, ZRAM_IDLE);
 			zram_slot_unlock(zram, index);
-			continue;
+			goto next;
 		}
 
 		bio_init(&bio, &bio_vec, 1);
@@ -762,13 +759,12 @@ static ssize_t writeback_store(struct device *dev,
 		 * XXX: A single page IO would be inefficient for write
 		 * but it would be not bad as starter.
 		 */
-		ret = submit_bio_wait(&bio);
-		if (ret) {
+		if (submit_bio_wait(&bio)) {
 			zram_slot_lock(zram, index);
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);
 			zram_clear_flag(zram, index, ZRAM_IDLE);
 			zram_slot_unlock(zram, index);
-			continue;
+			goto next;
 		}
 
 		atomic64_inc(&zram->stats.bd_writes);
@@ -794,6 +790,7 @@ static ssize_t writeback_store(struct device *dev,
 		zram_set_flag(zram, index, ZRAM_WB);
 		zram_set_element(zram, index, blk_idx);
 		blk_idx = 0;
+		done++;
 		atomic64_inc(&zram->stats.pages_stored);
 		spin_lock(&zram->wb_limit_lock);
 		if (zram->wb_limit_enable && zram->bd_wb_limit > 0)
@@ -801,12 +798,47 @@ static ssize_t writeback_store(struct device *dev,
 		spin_unlock(&zram->wb_limit_lock);
 next:
 		zram_slot_unlock(zram, index);
+		index++;
 	}
 
 	if (blk_idx)
 		free_block_bdev(zram, blk_idx);
-	ret = len;
 	__free_page(page);
+
+	*next = index;
+	return done;
+}
+
+static ssize_t writeback_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	struct zram *zram = dev_to_zram(dev);
+	unsigned long nr_pages;
+	unsigned long next;
+	ssize_t ret;
+	int mode;
+
+	if (sysfs_streq(buf, "idle"))
+		mode = IDLE_WRITEBACK;
+	else if (sysfs_streq(buf, "huge"))
+		mode = HUGE_WRITEBACK;
+	else
+		return -EINVAL;
+
+	down_read(&zram->init_lock);
+	if (!init_done(zram)) {
+		ret = -EINVAL;
+		goto release_init_lock;
+	}
+
+	if (!zram->backing_dev) {
+		ret = -ENODEV;
+		goto release_init_lock;
+	}
+
+	nr_pages = zram->disksize >> PAGE_SHIFT;
+	zram_writeback_range(zram, mode, 0, nr_pages, &next);
+	ret = len;
 release_init_lock:
 	up_read(&zram->init_lock);
 
@@ -1221,6 +1253,250 @@ static ssize_t recompress_store(struct device *dev,
 
 	return len;
 }
+
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+/*
+ * Background recompression, modelled after what OEM hybrid-swap daemons do:
+ *  - only run when memory is actually tight (MemAvailable watermark)
+ *  - only touch pages that stayed idle since the last marking pass
+ *  - back off when recompressed pages are read back (refault feedback)
+ *  - stay out of the way when the CPU is busy, and work in small slices
+ *
+ * Phases: mark slots idle -> recompress idle slots -> (optional) idle writeback.
+ */
+#define ZRAM_RECOMP_PHASE_MARK		0
+#define ZRAM_RECOMP_PHASE_SCAN		1
+#define ZRAM_RECOMP_PHASE_WB		2
+
+#define ZRAM_RECOMP_MARK_CHUNK		8192
+#define ZRAM_RECOMP_WB_CHUNK		256
+#define ZRAM_RECOMP_INTERVAL_MS		50
+#define ZRAM_RECOMP_COOLDOWN_MS		600000
+#define ZRAM_RECOMP_PENALTY_MS		1800000
+#define ZRAM_RECOMP_IDLE_MS		30000
+#define ZRAM_RECOMP_BUSY_MS		2000
+#define ZRAM_RECOMP_SLICE_NS		8000000ULL
+
+/* start recompressing below this MemAvailable percentage */
+#define ZRAM_RECOMP_WATERMARK_PCT	15
+/* below this, try idle writeback first when a backing device exists */
+#define ZRAM_RECOMP_CRITICAL_PCT	6
+/* abort a pass when more than this percentage of pages is read back */
+#define ZRAM_RECOMP_REFAULT_PCT		10
+
+static void zram_recomp_schedule(struct zram *zram, unsigned int msecs)
+{
+	if (!READ_ONCE(zram->recomp_enabled))
+		return;
+	schedule_delayed_work(&zram->recomp_work, msecs_to_jiffies(msecs));
+}
+
+static void zram_mark_idle_chunk(struct zram *zram, unsigned long num_pages)
+{
+	unsigned long i, end;
+	bool finished;
+
+	end = zram->recomp_idle_cursor + ZRAM_RECOMP_MARK_CHUNK;
+	if (end > num_pages)
+		end = num_pages;
+
+	for (i = zram->recomp_idle_cursor; i < end; i++) {
+		zram_slot_lock(zram, i);
+		if (zram_allocated(zram, i) &&
+				!zram_test_flag(zram, i, ZRAM_UNDER_WB))
+			zram_set_flag(zram, i, ZRAM_IDLE);
+		zram_slot_unlock(zram, i);
+	}
+
+	finished = (end >= num_pages);
+	zram->recomp_idle_cursor = finished ? 0 : end;
+	if (finished) {
+		zram->recomp_phase = ZRAM_RECOMP_PHASE_SCAN;
+		zram->recomp_cursor = 0;
+		zram->recomp_pass_done = 0;
+		zram->recomp_refault_base =
+			atomic64_read(&zram->stats.recomp_refault);
+	}
+}
+
+static void zram_recomp_finish_pass(struct zram *zram, unsigned int *next_ms)
+{
+	u64 refaults = atomic64_read(&zram->stats.recomp_refault) -
+		zram->recomp_refault_base;
+	unsigned int ms = ZRAM_RECOMP_COOLDOWN_MS;
+
+	if (zram->recomp_pass_done &&
+			refaults * 100 >
+			(u64)zram->recomp_pass_done * ZRAM_RECOMP_REFAULT_PCT)
+		ms = ZRAM_RECOMP_PENALTY_MS;
+
+	pr_info("%s: recompressed %lu pages, %llu refaults, cooldown %ums\n",
+			zram->disk->disk_name, zram->recomp_pass_done,
+			refaults, ms);
+
+	zram->recomp_phase = ZRAM_RECOMP_PHASE_MARK;
+	zram->recomp_idle_cursor = 0;
+	zram->recomp_cursor = 0;
+	*next_ms = ms;
+}
+
+static void zram_recomp_work_fn(struct work_struct *work)
+{
+	struct zram *zram = container_of(to_delayed_work(work),
+			struct zram, recomp_work);
+	unsigned long num_pages;
+	unsigned int next_ms = ZRAM_RECOMP_INTERVAL_MS;
+	u64 total, avail;
+
+	down_read(&zram->init_lock);
+
+	if (!init_done(zram) || !READ_ONCE(zram->recomp_enabled) ||
+			zram->nr_comps < 2) {
+		up_read(&zram->init_lock);
+		return;
+	}
+
+	if (!atomic64_read(&zram->stats.pages_stored)) {
+		up_read(&zram->init_lock);
+		zram_recomp_schedule(zram, ZRAM_RECOMP_IDLE_MS);
+		return;
+	}
+
+	/* stay away while the CPU is loaded */
+	if (avenrun[0] > ((unsigned long)num_online_cpus() << FSHIFT)) {
+		up_read(&zram->init_lock);
+		zram_recomp_schedule(zram, ZRAM_RECOMP_BUSY_MS);
+		return;
+	}
+
+	total = (u64)totalram_pages << PAGE_SHIFT;
+	avail = (u64)si_mem_available() << PAGE_SHIFT;
+
+	/* enough free memory: nothing to win, just poll */
+	if (avail * 100 > total * ZRAM_RECOMP_WATERMARK_PCT) {
+		up_read(&zram->init_lock);
+		zram_recomp_schedule(zram, ZRAM_RECOMP_IDLE_MS);
+		return;
+	}
+
+	num_pages = zram->disksize >> PAGE_SHIFT;
+
+	if (zram->recomp_phase == ZRAM_RECOMP_PHASE_MARK) {
+		zram_mark_idle_chunk(zram, num_pages);
+		up_read(&zram->init_lock);
+		zram_recomp_schedule(zram, ZRAM_RECOMP_INTERVAL_MS);
+		return;
+	}
+
+	if (zram->recomp_phase == ZRAM_RECOMP_PHASE_WB) {
+#ifdef CONFIG_ZRAM_WRITEBACK
+		if (!zram->backing_dev) {
+			zram->recomp_phase = ZRAM_RECOMP_PHASE_SCAN;
+			zram->recomp_cursor = 0;
+		} else {
+			zram_writeback_range(zram, IDLE_WRITEBACK,
+					zram->recomp_cursor,
+					ZRAM_RECOMP_WB_CHUNK,
+					&zram->recomp_cursor);
+			if (zram->recomp_cursor >= num_pages) {
+				zram->recomp_phase = ZRAM_RECOMP_PHASE_SCAN;
+				zram->recomp_cursor = 0;
+				next_ms = ZRAM_RECOMP_COOLDOWN_MS;
+			}
+			up_read(&zram->init_lock);
+			zram_recomp_schedule(zram, next_ms);
+			return;
+		}
+#else
+		zram->recomp_phase = ZRAM_RECOMP_PHASE_SCAN;
+		zram->recomp_cursor = 0;
+#endif
+	}
+
+	/* scan slice */
+	{
+		ktime_t start = ktime_get();
+		struct page *page;
+
+		if (avail * 100 < total * ZRAM_RECOMP_CRITICAL_PCT
+#ifdef CONFIG_ZRAM_WRITEBACK
+				&& zram->backing_dev
+#endif
+				) {
+			zram->recomp_phase = ZRAM_RECOMP_PHASE_WB;
+			zram->recomp_cursor = 0;
+			up_read(&zram->init_lock);
+			zram_recomp_schedule(zram, 0);
+			return;
+		}
+
+		page = alloc_page(GFP_KERNEL | __GFP_HIGHMEM);
+		if (!page) {
+			up_read(&zram->init_lock);
+			zram_recomp_schedule(zram, ZRAM_RECOMP_IDLE_MS);
+			return;
+		}
+
+		while (zram->recomp_cursor < num_pages &&
+				ktime_before(ktime_get(),
+					ktime_add_ns(start,
+						ZRAM_RECOMP_SLICE_NS))) {
+			zram->recomp_pass_done += zram_recompress_slot(zram,
+					zram->recomp_cursor, page);
+			zram->recomp_cursor++;
+			cond_resched();
+		}
+
+		__free_page(page);
+
+		if (zram->recomp_cursor >= num_pages)
+			zram_recomp_finish_pass(zram, &next_ms);
+	}
+
+	up_read(&zram->init_lock);
+
+	zram_recomp_schedule(zram, next_ms);
+}
+
+static ssize_t auto_recompress_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct zram *zram = dev_to_zram(dev);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n",
+			READ_ONCE(zram->recomp_enabled) ? 1 : 0);
+}
+
+static ssize_t auto_recompress_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	struct zram *zram = dev_to_zram(dev);
+	bool enable;
+	int err;
+
+	err = kstrtobool(buf, &enable);
+	if (err)
+		return err;
+
+	down_write(&zram->init_lock);
+	WRITE_ONCE(zram->recomp_enabled, enable);
+	if (enable) {
+		zram->recomp_phase = ZRAM_RECOMP_PHASE_MARK;
+		zram->recomp_idle_cursor = 0;
+		zram->recomp_cursor = 0;
+		zram->recomp_pass_done = 0;
+	}
+	up_write(&zram->init_lock);
+
+	if (!enable) {
+		cancel_delayed_work_sync(&zram->recomp_work);
+	} else if (init_done(zram) && zram->nr_comps >= 2) {
+		zram_recomp_schedule(zram, 0);
+	}
+
+	return len;
+}
+#endif /* CONFIG_ZRAM_AUTO_RECOMP */
 #endif
 
 static ssize_t compact_store(struct device *dev,
@@ -1474,13 +1750,18 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 		kunmap_atomic(dst);
 		ret = 0;
 	} else {
-		struct zcomp *comp = zram_comp(zram, zram_get_algo(zram, index));
+		unsigned int algo = zram_get_algo(zram, index);
+		struct zcomp *comp = zram_comp(zram, algo);
 		struct zcomp_strm *zstrm = zcomp_stream_get(comp);
 
 		dst = kmap_atomic(page);
 		ret = zcomp_decompress(zstrm, src, size, dst);
 		kunmap_atomic(dst);
 		zcomp_stream_put(comp);
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+		if (algo)
+			atomic64_inc(&zram->stats.recomp_refault);
+#endif
 	}
 	zs_unmap_object(zram->mem_pool, handle);
 	zram_slot_unlock(zram, index);
@@ -1931,6 +2212,14 @@ static void zram_reset_device(struct zram *zram)
 	part_stat_set_all(&zram->disk->part0, 0);
 
 	up_write(&zram->init_lock);
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	/*
+	 * The worker checks init_done() under init_lock, so after the write
+	 * lock was dropped it either sees disksize == 0 and stops, or is
+	 * still running and must finish before we free the pool.
+	 */
+	cancel_delayed_work_sync(&zram->recomp_work);
+#endif
 	/* I/O operation under all of CPU are done so let's free */
 	zram_meta_free(zram, disksize);
 	memset(&zram->stats, 0, sizeof(zram->stats));
@@ -2013,6 +2302,10 @@ static ssize_t disksize_store(struct device *dev,
 
 	revalidate_disk(zram->disk);
 	up_write(&zram->init_lock);
+
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	zram_recomp_schedule(zram, ZRAM_RECOMP_IDLE_MS);
+#endif
 
 	return len;
 
@@ -2109,6 +2402,9 @@ static DEVICE_ATTR_RW(comp_algorithm);
 static DEVICE_ATTR_RW(recomp_algorithm);
 static DEVICE_ATTR_WO(recompress);
 #endif
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+static DEVICE_ATTR_RW(auto_recompress);
+#endif
 #ifdef CONFIG_ZRAM_WRITEBACK
 static DEVICE_ATTR_RW(backing_dev);
 static DEVICE_ATTR_WO(writeback);
@@ -2129,6 +2425,9 @@ static struct attribute *zram_disk_attrs[] = {
 #ifdef CONFIG_ZRAM_MULTI_COMP
 	&dev_attr_recomp_algorithm.attr,
 	&dev_attr_recompress.attr,
+#endif
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	&dev_attr_auto_recompress.attr,
 #endif
 #ifdef CONFIG_ZRAM_WRITEBACK
 	&dev_attr_backing_dev.attr,
@@ -2174,6 +2473,10 @@ static int zram_add(void)
 	device_id = ret;
 
 	init_rwsem(&zram->init_lock);
+#ifdef CONFIG_ZRAM_AUTO_RECOMP
+	INIT_DELAYED_WORK(&zram->recomp_work, zram_recomp_work_fn);
+	zram->recomp_enabled = true;
+#endif
 #ifdef CONFIG_ZRAM_WRITEBACK
 	spin_lock_init(&zram->wb_limit_lock);
 #endif

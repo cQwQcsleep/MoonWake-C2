@@ -26,6 +26,7 @@ chmod 0755 /data/adb/service.d/zz-moonwake-tuning.sh
 | `ZRAM_RECOMP_ALGO` | 空 | 次算法；设置后先写 `recomp_algorithm`，开机后触发一次重压缩（需 C2PN 的 `CONFIG_ZRAM_MULTI_COMP`） |
 | `ZRAM_DISKSIZE_PCT` | `50` | swap 大小占 MemTotal 的百分比 |
 | `ZRAM_ENABLE_WRITEBACK` | `1` | 0 = 只调容量与算法，不建回写 |
+| `ZRAM_WB_IDLE` | `0` | 1 = 开机做一次 idle 回写（先 `all` 标记再 `idle` 回写） |
 | `ZRAM_BACKING_FILE` | `/data/adb/zram_backing.img` | 回写文件 |
 | `ZRAM_BACKING_MB` | `2048` | 文件大小 |
 | `ZRAM_WB_LIMIT_MB` | `1024` | 最大回写量 |

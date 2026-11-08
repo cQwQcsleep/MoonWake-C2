@@ -91,10 +91,13 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 - 每页记录所用算法，读路径按页解压
 - 次算法 `recomp_algorithm` 必须在 `disksize` 之前设置
-- 手动触发重压缩：`echo 1 > /sys/block/zram0/recompress`
+- 自动重压缩：内存低于 15% 水位时按 8ms 时间片、50ms 间隔分批处理冷页，一轮后冷却 10 分钟
+- refault 反馈：重压页被读回比例超 10% 时冷却 30 分钟
+- 内存极紧（< 6%）且配置了 backing_dev 时，先做 idle 回写再重压缩
+- C2P/C2PN 内核默认 `lz4kd`、`vm.swappiness=100`
+- 手动入口仍保留：`echo 1 > /sys/block/zram0/recompress`
+- 开关：`/sys/block/zram0/auto_recompress`
 - 产物：`MoonWake_2.7.0_C2PN_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2PN`
-
-重压缩是 CPU 密集操作，建议在充电/空闲时手动触发，不要放进开机流程。
 
 ## 设备端脚本与文档
 
