@@ -4,6 +4,7 @@
   --top-inset: var(--window-inset-top, 0px);
   --bottom-inset: var(--window-inset-bottom, 0px);
   font-family:
+    "MiSans",
     "MiSans VF",
     system-ui,
     -apple-system,
@@ -164,6 +165,8 @@ button:active,
   width: 104px;
   height: 104px;
   flex: 0 0 auto;
+  --m-color-primary: #fff;
+  --m-color-secondary-container: rgba(255, 255, 255, 0.25);
 }
 
 .hero__ring-label {
