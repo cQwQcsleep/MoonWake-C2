@@ -31,11 +31,44 @@ body {
 }
 
 .app {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
   padding-top: var(--top-inset);
   box-sizing: border-box;
+}
+
+/* HyperIsland CollapsingPage: large title + blurred bar when collapsed */
+.app__large {
+  padding: 10px 26px 6px;
+}
+
+.app__bar {
+  position: absolute;
+  top: var(--top-inset);
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--m-color-surface);
+  background: color-mix(in srgb, var(--m-color-surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  backdrop-filter: blur(28px) saturate(1.6);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 0.85, 0.25, 1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.app__bar--visible {
+  opacity: 1;
+  transform: none;
 }
 
 .app__body {
@@ -45,6 +78,11 @@ body {
 
 .app__bottom {
   padding-bottom: var(--bottom-inset);
+}
+
+/* compose-miuix has no persistent scrollbar */
+.app__body .m-scroll-area__bar {
+  display: none;
 }
 
 .page {
@@ -125,6 +163,55 @@ button:active,
   box-sizing: border-box;
 }
 
+/* HyperIsland StatusGrid: square status card + two stacked stat tiles */
+.status-grid {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.status-card {
+  flex: 1;
+  aspect-ratio: 1;
+}
+
+.status-card > .m-card {
+  height: 100%;
+}
+
+.status-card__inner {
+  position: relative;
+  height: 100%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.status-card__sub {
+  margin-top: 2px;
+}
+
+.status-card__mark {
+  position: absolute;
+  right: -8px;
+  bottom: -14px;
+  opacity: 0.78;
+}
+
+.status-tiles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-tiles .stat > .m-card {
+  min-height: 0;
+  height: 100%;
+}
+
 /* HyperIsland InfoCard: stacked 17sp label + 14sp summary, 16dp padding */
 .info-card > .m-card {
   padding: 16px;
@@ -164,8 +251,9 @@ button:active,
 .mono {
   font-family: ui-monospace, "Roboto Mono", monospace;
   font-size: 12px;
+  line-height: 1.55;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .page-enter-active,
