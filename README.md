@@ -75,6 +75,8 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 - 关闭 `KALLSYMS_ALL`、`IKCONFIG_PROC`、`UNMAP_KERNEL_AT_EL0`（KPTI）
 - 打开 `NET_SCH_FQ` / `NET_SCH_FQ_CODEL`，配合已有的 BBR
+- 打开 `SECURITY_DMESG_RESTRICT`，`kernel.dmesg_restrict` 默认 1
+- 内核里默认 MGLRU `min_ttl_ms=1000`、SuSFS 挂载对非 su 进程隐藏
 - 仅在 C2P 下把 `hybridmount_` 前缀加入 kallsyms 隐藏列表
 - MTK `ANDROID_DEFAULT_SETTING` 的 `select` 用新符号 `CONFIG_MWK_PERF_PROFILE` 做开关，未开启时行为与 C2 完全一致
 - 保留 `logging-hm.config` 的全部日志项、F2FS 压缩与 `ZRAM_WRITEBACK`（均与 C2 一致）

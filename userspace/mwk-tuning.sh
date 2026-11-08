@@ -1,53 +1,42 @@
 #!/system/bin/sh
-# MoonWake C2P: runtime tuning that does not need a kernel rebuild.
+# MoonWake C2P: verification helper.
 #
-# Install: copy to /data/adb/service.d/ and chmod 0755.
-# Everything here is best-effort: a missing node is logged, not fatal.
+# The runtime tuning itself is now compiled into the kernel (C2P only), so this
+# script only reports the effective values. It changes nothing.
+#
+# Install: copy to /data/adb/service.d/ and chmod 0755 (optional).
 
-LOG=/data/adb/moonwake-tuning.log
+OUT=/data/adb/moonwake-tuning.log
 
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
-}
+{
+    echo "=== $(date '+%Y-%m-%d %H:%M:%S') ==="
 
-# 1. MGLRU: 1000ms minimum TTL, smooths out ~100ms class stalls.
-if [ -w /sys/kernel/mm/lru_gen/min_ttl_ms ]; then
-    echo 1000 > /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null \
-        && log "lru_gen.min_ttl_ms=1000" || log "min_ttl_ms write failed"
-else
-    log "lru_gen not present"
-fi
+    # MGLRU minimum TTL: kernel default is 1000ms under CONFIG_MWK_PERF_PROFILE
+    if [ -r /sys/kernel/mm/lru_gen/min_ttl_ms ]; then
+        echo "lru_gen.min_ttl_ms=$(cat /sys/kernel/mm/lru_gen/min_ttl_ms)"
+    else
+        echo "lru_gen: not present"
+    fi
 
-# 2. F2FS directory read-ahead (helps app enumeration / large dirs).
-for d in /sys/fs/f2fs/*/; do
-    [ -w "${d}readdir_ra" ] && echo 1 > "${d}readdir_ra" 2>/dev/null \
-        && log "readdir_ra=1 ${d}"
-done
+    # F2FS readdir readahead: f2fs defaults this to 1 in super.c
+    for d in /sys/fs/f2fs/*/; do
+        [ -r "${d}readdir_ra" ] && echo "readdir_ra ${d}=$(cat "${d}readdir_ra")"
+        [ -r "${d}gc_urgent" ] && echo "gc_urgent ${d}=$(cat "${d}gc_urgent")"
+    done
 
-# 3. dmesg restricted to root.
-if [ -w /proc/sys/kernel/dmesg_restrict ]; then
-    echo 1 > /proc/sys/kernel/dmesg_restrict 2>/dev/null && log "dmesg_restrict=1"
-fi
+    # dmesg restricted to root (CONFIG_SECURITY_DMESG_RESTRICT sets default 1)
+    echo "dmesg_restrict=$(cat /proc/sys/kernel/dmesg_restrict 2>/dev/null)"
 
-# 4. SELinux must stay enforcing; log a warning if it is not.
-if command -v getenforce >/dev/null 2>&1; then
-    mode=$(getenforce 2>/dev/null)
-    log "selinux=$mode"
-    [ "$mode" = "Enforcing" ] || log "WARNING: selinux is $mode"
-fi
+    # SELinux must stay enforcing
+    command -v getenforce >/dev/null 2>&1 && echo "selinux=$(getenforce 2>/dev/null)"
 
-# 5. SuSFS: hide module mounts from non-su processes (static key, default off).
-for tool in /data/adb/ksu/bin/ksu_susfs /data/adb/modules/*/bin/ksu_susfs; do
-    [ -x "$tool" ] || continue
-    "$tool" hide_sus_mnts_for_non_su_procs 1 >/dev/null 2>&1 \
-        && log "susfs hide_sus_mnts_for_non_su_procs=1 via $tool" \
-        || log "susfs hide_sus_mnts failed via $tool"
-    break
-done
-
-# 6. Optional: keep gc_urgent off during normal use.
-for d in /sys/fs/f2fs/*/; do
-    [ -w "${d}gc_urgent" ] && echo 0 > "${d}gc_urgent" 2>/dev/null
-done
+    # SuSFS: mount hiding for non-su processes is enabled at susfs_init()
+    for tool in /data/adb/ksu/bin/ksu_susfs /data/adb/modules/*/bin/ksu_susfs; do
+        [ -x "$tool" ] || continue
+        "$tool" show enabled_features 2>/dev/null | tr ' ' '\n' | grep -c . >/dev/null
+        echo "susfs_tool=$tool"
+        break
+    done
+} >> "$OUT" 2>&1
 
 exit 0

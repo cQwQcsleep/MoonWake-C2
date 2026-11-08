@@ -1616,6 +1616,10 @@ void susfs_init(void) {
 #endif
 	SUSFS_LOGI("Initializing susfs_extra_works\n");
 	INIT_WORK(&susfs_extra_works, susfs_run_extra_works);
+#if defined(CONFIG_MWK_PERF_PROFILE) && defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
+	/* C2P: hide sus mounts from non-su processes without a userspace step */
+	static_branch_enable(&susfs_is_hide_sus_mnts_for_non_su_procs_enabled);
+#endif
 	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
 
