@@ -3,11 +3,9 @@ config MWK_PERF_PROFILE
 	default n
 	help
 	  When enabled, the ANDROID_DEFAULT_SETTING block below stops forcing
-	  a few debug/observability options on, so a release/perf variant can
-	  turn them off from its config fragment:
-
-	    IKCONFIG_PROC        (exposes the kernel config through /proc/config.gz)
-	    UNMAP_KERNEL_AT_EL0  (KPTI; not required on Cortex-A78/A55)
+	  IKCONFIG_PROC and UNMAP_KERNEL_AT_EL0 on, so a fragment may still
+	  choose them explicitly.  This gate also selects the perf defaults:
+	  vm_swappiness = 100 and the hybridmount symbol filter.
 
 	  Leave this disabled for the default (debug-preserving) build.
 
