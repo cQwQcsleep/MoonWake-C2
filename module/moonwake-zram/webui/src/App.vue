@@ -19,10 +19,11 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
 function onTab(event: Event) {
   tab.value = (event.target as HTMLElement & { activeTabIndex: number })
     .activeTabIndex;
+  window.scrollTo(0, 0);
 }
 
 function reload() {
-  window.location.reload();
+  window.dispatchEvent(new Event("mw:refresh"));
 }
 </script>
 
@@ -30,7 +31,7 @@ function reload() {
   <header class="header" :class="{ scroll: scrolled }">
     <div id="title">MoonWake ZRAM</div>
     <div class="spacer"></div>
-    <md-icon-button aria-label="刷新" @click="reload">
+    <md-icon-button v-if="tab === 0" aria-label="刷新" @click="reload">
       <md-icon>refresh</md-icon>
     </md-icon-button>
   </header>

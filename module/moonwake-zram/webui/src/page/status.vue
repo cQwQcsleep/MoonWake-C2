@@ -1,17 +1,36 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { getStatus } from "../lib/api";
 import type { Status } from "../lib/types";
 
 const s = ref<Status | null>(null);
+const mounted = ref(false);
+const pctShown = ref<number | null>(null);
+
+const RING_R = 52;
+const CIRC = 2 * Math.PI * RING_R;
 
 const gib = (n: number) => (n / 1024 ** 3).toFixed(2);
 const mib = (n: number) => (n / 1024 ** 2).toFixed(0);
 
-const ratio = computed(() => {
-  if (!s.value || !s.value.compr) return "--";
-  return (s.value.orig / s.value.compr).toFixed(2) + "x";
+const usage = computed(() => {
+  if (!s.value || !s.value.disksize) return 0;
+  return Math.min(1, Math.max(0, s.value.memused / s.value.disksize));
 });
+
+const usagePct = computed(() => Math.round(usage.value * 100));
+
+const ratioPct = computed(() =>
+  s.value && s.value.orig ? (s.value.compr / s.value.orig) * 100 : null,
+);
+
+const pctText = computed(() => {
+  if (ratioPct.value === null) return "--";
+  if (ratioPct.value > 0 && ratioPct.value < 1) return "<1%";
+  return `${pctShown.value ?? Math.round(ratioPct.value)}%`;
+});
+
+const dashOffset = computed(() => CIRC * (1 - (mounted.value ? usage.value : 0)));
 
 const savedText = computed(() =>
   s.value
@@ -28,9 +47,40 @@ const shortKernel = computed(() => {
   return k.match(/MoonWake-([^\s]+)/)?.[1] || k || "-";
 });
 
-onMounted(async () => {
+function countUp(to: number) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    pctShown.value = to;
+    return;
+  }
+  const start = performance.now();
+  const dur = 720;
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - start) / dur);
+    pctShown.value = Math.round(to * (1 - (1 - t) ** 3));
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  pctShown.value = 0;
+  requestAnimationFrame(tick);
+}
+
+async function load(animate = false) {
   s.value = await getStatus();
+  if (animate && ratioPct.value !== null) {
+    countUp(Math.round(ratioPct.value));
+    requestAnimationFrame(() => {
+      mounted.value = true;
+    });
+  }
+}
+
+const onRefresh = () => void load();
+
+onMounted(async () => {
+  await load(true);
+  window.addEventListener("mw:refresh", onRefresh);
 });
+
+onBeforeUnmount(() => window.removeEventListener("mw:refresh", onRefresh));
 </script>
 
 <template>
@@ -42,23 +92,46 @@ onMounted(async () => {
           {{ s ? `${gib(s.disksize)} GB` : "--" }}
         </span>
         <span class="t-body hero__sub">
-          已用 {{ s ? `${mib(s.memused)} MB` : "--" }}
+          已用 {{ s ? `${mib(s.memused)} MB` : "--" }} · {{ usagePct }}%
         </span>
       </div>
-      <div class="hero__ratio">
-        <span class="t-title">{{ ratio }}</span>
-        <span class="t-label">压缩比</span>
+      <div
+        class="ring"
+        role="img"
+        :aria-label="`ZRAM 使用率 ${usagePct}%，压缩后占原始数据 ${pctText}`"
+      >
+        <svg class="ring__svg" viewBox="0 0 120 120">
+          <circle class="ring__track" cx="60" cy="60" :r="RING_R" />
+          <circle
+            class="ring__bar"
+            cx="60"
+            cy="60"
+            :r="RING_R"
+            :stroke-dasharray="CIRC"
+            :stroke-dashoffset="dashOffset"
+          />
+        </svg>
+        <div class="ring__center">
+          <span class="ring__pct">{{ pctText }}</span>
+          <span class="ring__cap">压缩后占比</span>
+        </div>
       </div>
     </section>
 
     <div class="stat-row">
       <div class="stat">
-        <span class="t-label stat__label">压缩节省</span>
-        <span class="t-headline">{{ savedText }}</span>
+        <div class="stat__head">
+          <span class="t-label stat__label">压缩节省</span>
+          <md-icon class="stat__icon" aria-hidden="true">compress</md-icon>
+        </div>
+        <span class="t-headline stat__value">{{ savedText }}</span>
       </div>
       <div class="stat">
-        <span class="t-label stat__label">可用内存</span>
-        <span class="t-headline">{{ availText }}</span>
+        <div class="stat__head">
+          <span class="t-label stat__label">可用内存</span>
+          <md-icon class="stat__icon" aria-hidden="true">memory</md-icon>
+        </div>
+        <span class="t-headline stat__value">{{ availText }}</span>
       </div>
     </div>
 
