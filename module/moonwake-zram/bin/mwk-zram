@@ -1,0 +1,182 @@
+#!/system/bin/sh
+# mwk-zram: zram helper for the MoonWake ZRAM module.
+#
+# Subcommands:
+#   status                 print JSON with the current state
+#   apply                  apply /data/adb/moonwake-zram.conf to zram0
+#   recompress             trigger one recompression pass
+#   writeback              mark idle pages and write them back
+#   logs                   last 40 lines of kernel log mentioning zram
+#   set <key> <value>      update the config file
+#   get                    print the config file
+#
+# Config keys (key=value):
+#   disksize_pct=50        swap size as % of MemTotal
+#   algo=lz4kd             primary algorithm
+#   recomp_algo=zstdn      secondary algorithm (none = disable)
+#   auto_recomp=1          background recompression switch
+#   writeback=0            1 = set up backing file + limits
+#   backing_mb=2048        backing file size
+#   wb_limit_mb=1024       max bytes written back
+
+ZRAM_SYS=/sys/block/zram0
+ZRAM_DEV=/dev/block/zram0
+CONF=/data/adb/moonwake-zram.conf
+LOG=/data/adb/moonwake-zram.log
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
+}
+
+defaults() {
+    cat > "$CONF" <<'EOF'
+disksize_pct=50
+algo=lz4kd
+recomp_algo=zstdn
+auto_recomp=1
+writeback=0
+backing_mb=2048
+wb_limit_mb=1024
+EOF
+}
+
+load_conf() {
+    [ -f "$CONF" ] || defaults
+    # shellcheck disable=SC1090
+    . "$CONF"
+    disksize_pct=${disksize_pct:-50}
+    algo=${algo:-lz4kd}
+    recomp_algo=${recomp_algo:-zstdn}
+    auto_recomp=${auto_recomp:-1}
+    writeback=${writeback:-0}
+    backing_mb=${backing_mb:-2048}
+    wb_limit_mb=${wb_limit_mb:-1024}
+}
+
+memtotal_kb() {
+    awk '/^MemTotal:/ {print $2}' /proc/meminfo
+}
+
+wait_zram() {
+    i=0
+    while [ ! -e "$ZRAM_SYS/disksize" ] && [ $i -lt 50 ]; do
+        sleep 0.2 2>/dev/null || sleep 1
+        i=$((i + 1))
+    done
+    [ -e "$ZRAM_SYS/disksize" ]
+}
+
+setup_backing() {
+    BACKING_FILE=/data/adb/zram_backing.img
+    if [ ! -f "$BACKING_FILE" ]; then
+        log "create backing file ${backing_mb}MB"
+        if ! fallocate -l "${backing_mb}M" "$BACKING_FILE" 2>/dev/null; then
+            truncate -s "${backing_mb}M" "$BACKING_FILE" 2>/dev/null
+        fi
+    fi
+    LOOP=$(losetup -f 2>/dev/null)
+    [ -n "$LOOP" ] || return 1
+    losetup "$LOOP" "$BACKING_FILE" 2>/dev/null || return 1
+    BACKING_DEV=$LOOP
+}
+
+apply() {
+    wait_zram || { log "zram0 not available"; return 1; }
+    load_conf
+
+    want=$(( $(memtotal_kb) * 1024 / 100 * disksize_pct ))
+    cur=$(cat "$ZRAM_SYS/disksize" 2>/dev/null || echo 0)
+    cur_algo=$(cat "$ZRAM_SYS/comp_algorithm" 2>/dev/null | sed 's/.*\[\(.*\)\].*/\1/')
+    cur_recomp=$(cat "$ZRAM_SYS/recomp_algorithm" 2>/dev/null)
+
+    need_reset=0
+    [ "$cur" != "$want" ] && need_reset=1
+    [ "$cur_algo" != "$algo" ] && need_reset=1
+    [ "$cur_recomp" != "$recomp_algo" ] && need_reset=1
+    [ "$writeback" = "1" ] && need_reset=1
+
+    if [ "$need_reset" = "1" ]; then
+        swapoff "$ZRAM_DEV" 2>/dev/null
+        echo 1 > "$ZRAM_SYS/reset" 2>/dev/null
+        log "reset zram0 (was ${cur} bytes, $cur_algo / $cur_recomp)"
+    fi
+
+    if [ "$writeback" = "1" ] && setup_backing; then
+        echo "$BACKING_DEV" > "$ZRAM_SYS/backing_dev" 2>/dev/null
+        log "backing_dev=$BACKING_DEV"
+    fi
+
+    if [ -w "$ZRAM_SYS/recomp_algorithm" ] && [ "$recomp_algo" != "$cur_recomp" ]; then
+        echo "$recomp_algo" > "$ZRAM_SYS/recomp_algorithm" 2>/dev/null \
+            && log "recomp_algorithm=$recomp_algo" \
+            || log "recomp_algorithm write failed"
+    fi
+
+    echo "$want" > "$ZRAM_SYS/disksize" 2>/dev/null || log "disksize write failed"
+    echo "$algo" > "$ZRAM_SYS/comp_algorithm" 2>/dev/null || log "comp_algorithm write failed"
+    swapon "$ZRAM_DEV" 2>/dev/null || log "swapon failed"
+
+    if [ -w "$ZRAM_SYS/auto_recompress" ]; then
+        echo "$auto_recomp" > "$ZRAM_SYS/auto_recompress" 2>/dev/null
+    fi
+
+    if [ "$writeback" = "1" ]; then
+        echo 1 > "$ZRAM_SYS/writeback_limit_enable" 2>/dev/null
+        echo $(( wb_limit_mb * 1024 * 1024 )) > "$ZRAM_SYS/writeback_limit" 2>/dev/null
+    fi
+
+    log "apply done: disksize=$want algo=$algo recomp=$recomp_algo auto=$auto_recomp wb=$writeback"
+}
+
+status() {
+    load_conf
+    initstate=$(cat "$ZRAM_SYS/initstate" 2>/dev/null || echo 0)
+    disksize=$(cat "$ZRAM_SYS/disksize" 2>/dev/null || echo 0)
+    algo=$(cat "$ZRAM_SYS/comp_algorithm" 2>/dev/null | sed 's/.*\[\(.*\)\].*/\1/')
+    recomp=$(cat "$ZRAM_SYS/recomp_algorithm" 2>/dev/null || echo none)
+    auto=$(cat "$ZRAM_SYS/auto_recompress" 2>/dev/null || echo 0)
+    backing=$(cat "$ZRAM_SYS/backing_dev" 2>/dev/null || echo none)
+
+    mm=$(cat "$ZRAM_SYS/mm_stat" 2>/dev/null || echo "0 0 0 0 0 0 0 0 0")
+    orig=$(echo "$mm" | awk '{print $1}')
+    compr=$(echo "$mm" | awk '{print $2}')
+    memused=$(echo "$mm" | awk '{print $3}')
+
+    bd=$(cat "$ZRAM_SYS/bd_stat" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g')
+
+    last=$(dmesg 2>/dev/null | grep "recompressed" | tail -1 | sed 's/.*zram0: //')
+
+    cat <<EOF
+{"kernel":"$(uname -r)","init":$initstate,"disksize":$disksize,"orig":${orig:-0},"compr":${compr:-0},"memused":${memused:-0},"algo":"$algo","recomp_algo":"$recomp","auto_recomp":$auto,"backing":"$backing","bd":"$bd","last":"$last","conf":{"disksize_pct":$disksize_pct,"algo":"$algo","recomp_algo":"$recomp_algo","auto_recomp":$auto_recomp,"writeback":$writeback,"backing_mb":$backing_mb,"wb_limit_mb":$wb_limit_mb}}
+EOF
+}
+
+set_key() {
+    key=$1
+    value=$2
+    [ -n "$key" ] || return 1
+    load_conf
+    case "$key" in
+        disksize_pct|auto_recomp|writeback|backing_mb|wb_limit_mb|algo|recomp_algo) ;;
+        *) return 1 ;;
+    esac
+    tmp="$CONF.tmp"
+    grep -v "^${key}=" "$CONF" > "$tmp" 2>/dev/null
+    echo "${key}=${value}" >> "$tmp"
+    mv "$tmp" "$CONF"
+    chmod 600 "$CONF"
+}
+
+case "$1" in
+    status) status ;;
+    apply) apply ;;
+    get) load_conf; cat "$CONF" ;;
+    logs) dmesg 2>/dev/null | grep -i zram | tail -40 ;;
+    recompress) echo 1 > "$ZRAM_SYS/recompress" 2>/dev/null && echo ok || echo fail ;;
+    writeback)
+        echo all > "$ZRAM_SYS/idle" 2>/dev/null
+        echo idle > "$ZRAM_SYS/writeback" 2>/dev/null && echo ok || echo fail
+        ;;
+    set) set_key "$2" "$3" && echo ok || echo fail ;;
+    *) echo "usage: $0 {status|apply|get|logs|recompress|writeback|set key value}" ;;
+esac
