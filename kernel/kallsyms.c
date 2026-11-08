@@ -679,6 +679,7 @@ static int s_show(struct seq_file *m, void *p)
 			susfs_starts_with(iter->name, "track_throne") ||
 			susfs_starts_with(iter->name, "on_post_fs_data") ||
 			susfs_starts_with(iter->name, "try_umount") ||
+			susfs_starts_with(iter->name, "hybridmount") ||
 			susfs_starts_with(iter->name, "kernelsu") ||
 			susfs_starts_with(iter->name, "__initcall__kmod_kernelsu") ||
 			susfs_starts_with(iter->name, "apply_kernelsu") ||
