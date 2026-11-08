@@ -56,9 +56,6 @@ body {
 .mw-card .m-card {
   border-radius: 22px;
   corner-shape: squircle;
-  box-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.03),
-    0 10px 30px -14px rgba(0, 0, 0, 0.22);
 }
 
 @keyframes mw-card-in {
@@ -126,4 +123,82 @@ button:active,
 .page-leave-to {
   opacity: 0;
   transform: translateY(6px);
+}
+
+/* hero card: capacity + compression ring */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 20px;
+}
+
+.hero__label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.hero__value {
+  color: #fff;
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.2;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__sub {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.ring {
+  width: 104px;
+  height: 104px;
+  flex: 0 0 auto;
+  transform: rotate(-90deg);
+}
+
+.ring__bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 9;
+}
+
+.ring__fg {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dasharray: 314.159;
+  transition: stroke-dashoffset 900ms cubic-bezier(0.22, 0.85, 0.25, 1) 120ms;
+}
+
+.ring__value {
+  fill: #fff;
+  font-size: 21px;
+  font-weight: 650;
+  text-anchor: middle;
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+
+.ring__unit {
+  fill: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  text-anchor: middle;
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > .mw-card {
+    animation: none;
+  }
+
+  .ring__fg {
+    transition: none;
+  }
 }

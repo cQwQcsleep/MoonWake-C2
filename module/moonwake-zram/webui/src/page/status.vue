@@ -7,7 +7,7 @@ import {
   MiuixSmallTitle,
   MiuixText,
 } from "miuix-vue";
-import { Info, Settings } from "miuix-vue/icons";
+import { Settings } from "miuix-vue/icons";
 import { getStatus } from "../lib/api";
 import type { Status } from "../lib/types";
 
@@ -21,6 +21,14 @@ const ratio = computed(() => {
   return (s.value.orig / s.value.compr).toFixed(2) + "x";
 });
 
+const RING_C = 2 * Math.PI * 50;
+
+const ringOffset = computed(() => {
+  if (!s.value || !s.value.orig) return RING_C;
+  const saved = 1 - s.value.compr / s.value.orig;
+  return RING_C * (1 - Math.min(1, Math.max(0, saved)));
+});
+
 onMounted(async () => {
   s.value = await getStatus();
 });
@@ -29,26 +37,30 @@ onMounted(async () => {
 <template>
   <div class="page">
     <MiuixCard
-      class="card-gap"
-      show-indication
+      class="mw-hero card-gap"
       style="--m-card-color: var(--m-color-primary-variant)"
     >
-      <MiuixBasicComponent
-        title="ZRAM 容量"
-        titleColor="var(--m-color-on-primary-variant)"
-        :summary="s ? `${gib(s.disksize)} GB` : '读取中'"
-        summaryColor="var(--m-color-on-primary-variant)"
-      >
-        <template #start>
-          <MiuixIcon color="var(--m-color-on-primary-variant)" :icon="Info" />
-        </template>
-      </MiuixBasicComponent>
-      <MiuixBasicComponent
-        :title="`压缩比 ${ratio}`"
-        titleColor="var(--m-color-on-primary-variant)"
-        :summary="s ? `占用 ${mib(s.memused)} MB` : ''"
-        summaryColor="var(--m-color-on-primary-variant)"
-      />
+      <div class="hero">
+        <div class="hero__text">
+          <div class="hero__label">ZRAM 容量</div>
+          <div class="hero__value">{{ s ? `${gib(s.disksize)} GB` : "--" }}</div>
+          <div class="hero__sub">
+            占用 {{ s ? `${mib(s.memused)} MB` : "--" }}
+          </div>
+        </div>
+        <svg class="ring" viewBox="0 0 120 120" role="img" aria-label="压缩比">
+          <circle class="ring__bg" cx="60" cy="60" r="50" />
+          <circle
+            class="ring__fg"
+            cx="60"
+            cy="60"
+            r="50"
+            :style="{ strokeDashoffset: ringOffset }"
+          />
+          <text class="ring__value" x="60" y="58">{{ ratio }}</text>
+          <text class="ring__unit" x="60" y="78">压缩比</text>
+        </svg>
+      </div>
     </MiuixCard>
 
     <MiuixSmallTitle text="算法" />
