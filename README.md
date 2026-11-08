@@ -85,6 +85,17 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 
 本变体尚未构建，也未在真机验证。
 
+## C2PN 变体
+
+`configs/release/compression-c2pn.json` = C2P + ZRAM 多算法（`CONFIG_ZRAM_MULTI_COMP=y`）。
+
+- 每页记录所用算法，读路径按页解压
+- 次算法 `recomp_algorithm` 必须在 `disksize` 之前设置
+- 手动触发重压缩：`echo 1 > /sys/block/zram0/recompress`
+- 产物：`MoonWake_2.7.0_C2PN_ak3.zip`，`uname -r` 为 `4.19.325-MoonWake-2.7.0-C2PN`
+
+重压缩是 CPU 密集操作，建议在充电/空闲时手动触发，不要放进开机流程。
+
 ## 设备端脚本与文档
 
 - `userspace/zram.sh`：zram 算法/容量 + loop 文件回写（`post-fs-data.d`）

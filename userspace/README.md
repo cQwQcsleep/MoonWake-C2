@@ -23,7 +23,7 @@ chmod 0755 /data/adb/service.d/zz-moonwake-tuning.sh
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `ZRAM_ALGO` | `lz4kd` | 主压缩算法 |
-| `ZRAM_RECOMP_ALGO` | 空 | 次算法；设置后先写 `recomp_algorithm`，开机后触发一次重压缩（需 `CONFIG_ZRAM_MULTI_COMP`） |
+| `ZRAM_RECOMP_ALGO` | 空 | 次算法；设置后先写 `recomp_algorithm`，开机后触发一次重压缩（需 C2PN 的 `CONFIG_ZRAM_MULTI_COMP`） |
 | `ZRAM_DISKSIZE_PCT` | `50` | swap 大小占 MemTotal 的百分比 |
 | `ZRAM_ENABLE_WRITEBACK` | `1` | 0 = 只调容量与算法，不建回写 |
 | `ZRAM_BACKING_FILE` | `/data/adb/zram_backing.img` | 回写文件 |

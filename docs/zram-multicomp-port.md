@@ -14,13 +14,13 @@
 
 ## 配置
 
-`arch/arm64/configs/vendor/perf-c2p.config` 新增：
+`arch/arm64/configs/vendor/perf-c2pn.config`（C2PN 专用片段）：
 
 ```
 CONFIG_ZRAM_MULTI_COMP=y
 ```
 
-C2 不开启，行为完全不变。
+C2 与 C2P 都不开启，行为完全不变。
 
 ## 使用
 
