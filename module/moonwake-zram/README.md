@@ -45,6 +45,7 @@ wb_limit_mb=1024
 BIN=/data/adb/modules/moonwake-zram/bin/mwk-zram
 $BIN status            # JSON 状态
 $BIN apply             # 应用配置（可能 reset zram）
+$BIN runtime           # 只同步运行时开关，不 reset
 $BIN recompress        # 手动触发一轮
 $BIN writeback         # 标记空闲并回写
 $BIN set algo zstdn    # 改单个键
@@ -63,7 +64,7 @@ pnpm build      # 输出到 ../webroot
 
 ```bash
 cd module/moonwake-zram
-zip -r ../moonwake-zram-v1.0.0.zip . -x "webui/*"
+zip -r ../moonwake-zram-v1.0.1.zip . -x "webui/*"
 ```
 
 `webui/` 只是源码，不必打进模块包。
@@ -78,5 +79,6 @@ WebUI 的页面外壳、MD3 主题变量、Snackbar 组件和 Material Symbols �
 ## 说明
 
 - 4.19 的 `comp_algorithm` 只能在未初始化时修改，改算法会重建 zram，当前 swap 内容会丢
+- 开机只同步 `auto_recompress` 等运行时开关，不会 reset 已初始化的 zram
 - 自动重压缩由内核执行，模块只负责配置和展示
 - 模块尚未在真机验证

@@ -87,13 +87,15 @@ apply() {
     want=$(( $(memtotal_kb) * 1024 / 100 * disksize_pct ))
     cur=$(cat "$ZRAM_SYS/disksize" 2>/dev/null || echo 0)
     cur_algo=$(cat "$ZRAM_SYS/comp_algorithm" 2>/dev/null | sed 's/.*\[\(.*\)\].*/\1/')
-    cur_recomp=$(cat "$ZRAM_SYS/recomp_algorithm" 2>/dev/null)
+    has_recomp=0
+    [ -e "$ZRAM_SYS/recomp_algorithm" ] && has_recomp=1
+    [ "$has_recomp" = "1" ] && cur_recomp=$(cat "$ZRAM_SYS/recomp_algorithm" 2>/dev/null)
 
     need_reset=0
     [ "$cur" != "$want" ] && need_reset=1
     [ "$cur_algo" != "$algo" ] && need_reset=1
-    [ "$cur_recomp" != "$recomp_algo" ] && need_reset=1
-    [ "$writeback" = "1" ] && need_reset=1
+    [ "$has_recomp" = "1" ] && [ "$cur_recomp" != "$recomp_algo" ] && need_reset=1
+    [ "$writeback" = "1" ] && [ "$has_recomp" = "1" ] && need_reset=1
 
     if [ "$need_reset" = "1" ]; then
         swapoff "$ZRAM_DEV" 2>/dev/null
@@ -126,6 +128,20 @@ apply() {
     fi
 
     log "apply done: disksize=$want algo=$algo recomp=$recomp_algo auto=$auto_recomp wb=$writeback"
+}
+
+runtime() {
+    wait_zram || return 1
+    load_conf
+
+    if [ -w "$ZRAM_SYS/auto_recompress" ]; then
+        echo "$auto_recomp" > "$ZRAM_SYS/auto_recompress" 2>/dev/null
+    fi
+    if [ -w "$ZRAM_SYS/writeback_limit_enable" ] && [ "$writeback" = "1" ]; then
+        echo 1 > "$ZRAM_SYS/writeback_limit_enable" 2>/dev/null
+        echo $(( wb_limit_mb * 1024 * 1024 )) > "$ZRAM_SYS/writeback_limit" 2>/dev/null
+    fi
+    log "runtime: auto=$auto_recomp wb=$writeback"
 }
 
 status() {
@@ -176,6 +192,7 @@ set_key() {
 case "$1" in
     status) status ;;
     apply) apply ;;
+    runtime) runtime ;;
     get) load_conf; cat "$CONF" ;;
     logs) dmesg 2>/dev/null | grep -i zram | tail -40 ;;
     recompress) echo 1 > "$ZRAM_SYS/recompress" 2>/dev/null && echo ok || echo fail ;;
@@ -184,5 +201,5 @@ case "$1" in
         echo idle > "$ZRAM_SYS/writeback" 2>/dev/null && echo ok || echo fail
         ;;
     set) set_key "$2" "$3" && echo ok || echo fail ;;
-    *) echo "usage: $0 {status|apply|get|logs|recompress|writeback|set key value}" ;;
+    *) echo "usage: $0 {status|apply|runtime|get|logs|recompress|writeback|set key value}" ;;
 esac

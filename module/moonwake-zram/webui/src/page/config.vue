@@ -62,18 +62,35 @@ onMounted(async () => {
   if (recompSel.value) recompSel.value.value = recomp.value;
 });
 
+const saving = ref(false);
+
+const paint = () =>
+  new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+
 async function save() {
-  await saveConf({
-    disksize_pct: pct.value,
-    algo: algo.value,
-    recomp_algo: recomp.value,
-    auto_recomp: auto.value ? 1 : 0,
-    writeback: wb.value ? 1 : 0,
-    backing_mb: Number(backingMb.value),
-    wb_limit_mb: Number(wbLimitMb.value),
-  });
-  await applyConf();
-  toast.show("已保存并应用");
+  if (saving.value) return;
+  saving.value = true;
+  toast.show("正在应用…");
+  await paint();
+  try {
+    await saveConf({
+      disksize_pct: pct.value,
+      algo: algo.value,
+      recomp_algo: recomp.value,
+      auto_recomp: auto.value ? 1 : 0,
+      writeback: wb.value ? 1 : 0,
+      backing_mb: Number(backingMb.value),
+      wb_limit_mb: Number(wbLimitMb.value),
+    });
+    await applyConf();
+    toast.show("已应用");
+  } catch {
+    toast.show("应用失败");
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -95,7 +112,7 @@ async function save() {
           :step="5"
           @input="onPct"
         ></md-slider>
-        <p class="t-body-sm helper">修改容量会重建 zram，当前 swap 内容会被清空。</p>
+        <p class="t-body-sm helper">改容量会重建 zram</p>
       </div>
     </section>
 
@@ -118,7 +135,7 @@ async function save() {
           <md-outlined-select
             ref="recompSel"
             label="次算法"
-            supporting-text="冷页重压缩使用"
+            supporting-text="冷页使用"
             :value="recomp"
             @change="onRecomp"
           >
@@ -130,7 +147,7 @@ async function save() {
         <div class="row">
           <span class="row__text">
             <span class="t-body-lg">自动重压缩</span>
-            <span class="t-body helper">内存紧张时由内核自动执行</span>
+            <span class="t-body helper">内存紧张时自动执行</span>
           </span>
           <md-switch
             aria-label="自动重压缩"
@@ -147,7 +164,7 @@ async function save() {
         <div class="row">
           <span class="row__text">
             <span class="t-body-lg">启用回写</span>
-            <span class="t-body helper">将冷页写入 backing 文件</span>
+            <span class="t-body helper">冷页写入 backing</span>
           </span>
           <md-switch
             aria-label="启用回写"
@@ -158,13 +175,13 @@ async function save() {
         <div class="field-row">
           <md-outlined-text-field
             type="number"
-            label="backing 文件 MB"
+            label="backing MB"
             :value="backingMb"
             @input="onBacking"
           ></md-outlined-text-field>
           <md-outlined-text-field
             type="number"
-            label="回写上限 MB"
+            label="上限 MB"
             :value="wbLimitMb"
             @input="onWbLimit"
           ></md-outlined-text-field>
@@ -173,8 +190,11 @@ async function save() {
     </section>
 
     <div class="save">
-      <md-filled-button @click="save">保存并应用</md-filled-button>
-      <span class="t-body-sm helper">保存后立即应用到 zram0</span>
+      <md-linear-progress v-if="saving" indeterminate></md-linear-progress>
+      <md-filled-button :disabled="saving" @click="save">
+        保存并应用
+      </md-filled-button>
+      <span class="t-body-sm helper">立即生效</span>
     </div>
   </div>
 </template>

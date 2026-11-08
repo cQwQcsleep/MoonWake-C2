@@ -13,15 +13,19 @@ const CIRC = 2 * Math.PI * RING_R;
 const gib = (n: number) => (n / 1024 ** 3).toFixed(2);
 const mib = (n: number) => (n / 1024 ** 2).toFixed(0);
 
-const usage = computed(() => {
+const usagePct = computed(() => {
   if (!s.value || !s.value.disksize) return 0;
-  return Math.min(1, Math.max(0, s.value.memused / s.value.disksize));
+  return Math.round(
+    Math.min(1, Math.max(0, s.value.memused / s.value.disksize)) * 100,
+  );
 });
-
-const usagePct = computed(() => Math.round(usage.value * 100));
 
 const ratioPct = computed(() =>
   s.value && s.value.orig ? (s.value.compr / s.value.orig) * 100 : null,
+);
+
+const ratioFrac = computed(() =>
+  ratioPct.value === null ? 0 : Math.min(1, Math.max(0, ratioPct.value / 100)),
 );
 
 const pctText = computed(() => {
@@ -30,7 +34,7 @@ const pctText = computed(() => {
   return `${pctShown.value ?? Math.round(ratioPct.value)}%`;
 });
 
-const dashOffset = computed(() => CIRC * (1 - (mounted.value ? usage.value : 0)));
+const dashOffset = computed(() => CIRC * (1 - (mounted.value ? ratioFrac.value : 0)));
 
 const savedText = computed(() =>
   s.value
@@ -98,7 +102,7 @@ onBeforeUnmount(() => window.removeEventListener("mw:refresh", onRefresh));
       <div
         class="ring"
         role="img"
-        :aria-label="`ZRAM 使用率 ${usagePct}%，压缩后占原始数据 ${pctText}`"
+        :aria-label="`压缩后占原始数据 ${pctText}`"
       >
         <svg class="ring__svg" viewBox="0 0 120 120">
           <circle class="ring__track" cx="60" cy="60" :r="RING_R" />
@@ -113,7 +117,6 @@ onBeforeUnmount(() => window.removeEventListener("mw:refresh", onRefresh));
         </svg>
         <div class="ring__center">
           <span class="ring__pct">{{ pctText }}</span>
-          <span class="ring__cap">压缩后占比</span>
         </div>
       </div>
     </section>

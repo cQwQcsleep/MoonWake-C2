@@ -68,12 +68,12 @@ export async function applyConf(): Promise<void> {
 
 export async function recompress(): Promise<void> {
   if (!isReal()) return;
-  await run(`sh ${BIN} recompress`);
+  await run(`(sh ${BIN} recompress >/dev/null 2>&1 &)`);
 }
 
 export async function writeback(): Promise<void> {
   if (!isReal()) return;
-  await run(`sh ${BIN} writeback`);
+  await run(`(sh ${BIN} writeback >/dev/null 2>&1 &)`);
 }
 
 export async function getLogs(): Promise<string> {

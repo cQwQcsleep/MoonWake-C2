@@ -12,7 +12,7 @@ while [ "$(getprop sys.boot_completed 2>/dev/null)" != "1" ] && [ $i -lt 60 ]; d
     i=$((i + 1))
 done
 
-$BIN apply
+$BIN runtime
 
 # give the system a minute, then trigger one pass if the secondary algorithm
 # is configured and auto recompression is off
