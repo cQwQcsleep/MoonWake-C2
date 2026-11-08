@@ -3,7 +3,15 @@ import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
   base: "./",
-  plugins: [vue()],
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) => tag.startsWith("mdui-"),
+        },
+      },
+    }),
+  ],
   build: {
     outDir: "../webroot",
     emptyOutDir: true,

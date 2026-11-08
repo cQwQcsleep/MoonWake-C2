@@ -1,8 +1,12 @@
 import { createApp } from "vue";
-import { setThemeMode } from "miuix-vue";
-import "miuix-vue/style.css";
+import "mdui/mdui.css";
+import "mdui";
+import { setTheme } from "mdui/functions/setTheme.js";
+import { setColorScheme } from "mdui/functions/setColorScheme.js";
 import "./style.css";
 import App from "./App.vue";
 
-setThemeMode("system");
+setTheme("auto");
+setColorScheme("#3482ff");
+
 createApp(App).mount("#app");
