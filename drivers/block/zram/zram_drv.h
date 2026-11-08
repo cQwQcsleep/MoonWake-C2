@@ -68,6 +68,20 @@ struct zram_table_entry {
 #endif
 };
 
+#ifdef CONFIG_ZRAM_MULTI_COMP
+/*
+ * Bits [ZRAM_ALGO_SHIFT, ZRAM_ALGO_SHIFT + ZRAM_ALGO_BITS) of
+ * table[index].flags keep the algorithm index used for that page.
+ * The page flags start at ZRAM_FLAG_SHIFT and end at ZRAM_IDLE, so
+ * these bits are free.
+ */
+#define ZRAM_MAX_COMPS	4
+#define ZRAM_ALGO_SHIFT	30
+#define ZRAM_ALGO_BITS	2
+#define ZRAM_ALGO_MAX	((1U << ZRAM_ALGO_BITS) - 1)
+#define ZRAM_ALGO_MASK	((unsigned long)ZRAM_ALGO_MAX << ZRAM_ALGO_SHIFT)
+#endif
+
 struct zram_stats {
 	atomic64_t compr_data_size;	/* compressed size of pages stored */
 	atomic64_t num_reads;	/* failed + successful */
@@ -109,6 +123,11 @@ struct zram {
 	 */
 	u64 disksize;	/* bytes */
 	char compressor[CRYPTO_MAX_ALG_NAME];
+#ifdef CONFIG_ZRAM_MULTI_COMP
+	struct zcomp *comps[ZRAM_MAX_COMPS];
+	unsigned int nr_comps;
+	char recompressor[CRYPTO_MAX_ALG_NAME];
+#endif
 	/*
 	 * zram is claimed so open request will be failed
 	 */

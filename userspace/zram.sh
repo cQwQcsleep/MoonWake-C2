@@ -23,6 +23,7 @@ ZRAM_DEV=/dev/block/zram0
 ZRAM_SYS=/sys/block/zram0
 
 ZRAM_ALGO=${ZRAM_ALGO:-lz4kd}
+ZRAM_RECOMP_ALGO=${ZRAM_RECOMP_ALGO:-}
 ZRAM_DISKSIZE_PCT=${ZRAM_DISKSIZE_PCT:-50}
 ZRAM_ENABLE_WRITEBACK=${ZRAM_ENABLE_WRITEBACK:-1}
 ZRAM_BACKING_FILE=${ZRAM_BACKING_FILE:-/data/adb/zram_backing.img}
@@ -96,6 +97,13 @@ apply_zram() {
         fi
     fi
 
+    # secondary algorithm must be set before disksize
+    if [ -n "$ZRAM_RECOMP_ALGO" ] && [ -w "$ZRAM_SYS/recomp_algorithm" ]; then
+        echo "$ZRAM_RECOMP_ALGO" > "$ZRAM_SYS/recomp_algorithm" \
+            && log "recomp_algorithm=$ZRAM_RECOMP_ALGO" \
+            || log "recomp_algorithm write failed (CONFIG_ZRAM_MULTI_COMP?)"
+    fi
+
     echo "$want_bytes" > "$ZRAM_SYS/disksize" || log "disksize write failed"
     echo "$ZRAM_ALGO" > "$ZRAM_SYS/comp_algorithm" 2>/dev/null || log "comp_algorithm write failed"
     swapon "$ZRAM_DEV" 2>/dev/null || log "swapon failed"
@@ -104,6 +112,12 @@ apply_zram() {
         echo 1 > "$ZRAM_SYS/writeback_limit_enable" 2>/dev/null
         echo $(( ZRAM_WB_LIMIT_MB * 1024 * 1024 )) > "$ZRAM_SYS/writeback_limit" 2>/dev/null
         log "writeback limit ${ZRAM_WB_LIMIT_MB}MB"
+    fi
+
+    if [ -n "$ZRAM_RECOMP_ALGO" ] && [ -w "$ZRAM_SYS/recompress" ]; then
+        echo 1 > "$ZRAM_SYS/recompress" 2>/dev/null \
+            && log "recompress pass triggered" \
+            || log "recompress trigger failed"
     fi
 }
 
