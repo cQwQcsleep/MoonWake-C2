@@ -58,6 +58,8 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 选择 `compression-c2a.json` 时，产物名相应变为 `MoonWake_2.7.0_C2A_*`，内核版本为 `4.19.325-MoonWake-2.7.0-C2A`。
 
+每次成功构建都会自动创建 GitHub Release，tag 形如 `mwk-2.7.0-c2a-<run_number>`，附带 ak3 zip、`System.map`、config 和 ksu 元数据。
+
 ## 刷入后检查
 
 ```bash

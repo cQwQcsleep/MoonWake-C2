@@ -20,6 +20,7 @@ Outputs:
 
 - `MoonWake_2.7.0_C2_ak3.zip`: AnyKernel3 flashable zip artifact.
 - `verify-<run_number>`: verification artifact containing `MoonWake_2.7.0_C2_config.txt`, `MoonWake_2.7.0_C2_System.map`, and `MoonWake_2.7.0_C2_ksu.txt`.
+- GitHub Release: created automatically after every successful build, tagged like `mwk-2.7.0-c2a-<run_number>`, with the ak3 zip, System.map, config and ksu metadata attached.
 
 ## Vendored dependencies
 

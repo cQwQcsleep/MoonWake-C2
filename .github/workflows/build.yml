@@ -570,7 +570,9 @@ jobs:
   publish:
     needs: [Set-repos, Build-Kernel]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.full_dump == 'true' || github.event.inputs.send_to_telegram == 'true' }}
+    if: ${{ needs.Build-Kernel.result == 'success' }}
+    permissions:
+      contents: write
     env:
       buildfile: "${{ needs.Set-repos.outputs.buildfile }}"
     steps:
@@ -604,6 +606,42 @@ jobs:
           echo "KERNEL_BUILD_LIST<<EOF" >> $GITHUB_ENV
           printf "%s\n" ./packed_kernels/* >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
+      - name: "Set release tag"
+        id: release_meta
+        run: |
+          AK3_ZIP=$(ls packed_kernels/*_ak3.zip | head -n 1)
+          BASE=$(basename "$AK3_ZIP" _ak3.zip)
+          TAG=$(echo "$BASE" | sed 's/^MoonWake_/mwk-/; s/_/-/g' | tr 'A-Z' 'a-z')
+          echo "tag=${TAG}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "name=${BASE} #${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Release tag: ${TAG}-${{ github.run_number }}"
+
+      - name: "Prepare release assets"
+        run: |
+          mkdir -p release_assets
+          cp packed_kernels/*_ak3.zip release_assets/
+          find downloaded_kernels -type f \( -name '*_System.map' -o -name '*_config.txt' -o -name '*_ksu.txt' \) -exec cp {} release_assets/ \;
+          ls -lh release_assets
+
+      - name: "Publish GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          name: ${{ steps.release_meta.outputs.name }}
+          body: |
+            MoonWake kernel build
+
+            - Config file: `${{ github.event.inputs.config_file }}`
+            - Build type: `${{ github.event.inputs.config_type }}`
+            - Commit: `${{ github.sha }}`
+            - Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: release_assets/*
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4

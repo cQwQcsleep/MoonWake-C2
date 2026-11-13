@@ -141,3 +141,6 @@ MoonWake-Private-*
 ksu.sh
 /KernelSU/
 /setup.sh
+
+# Local build deliverables
+/MoonWake_*/
