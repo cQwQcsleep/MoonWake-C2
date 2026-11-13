@@ -10,7 +10,7 @@ on:
         description: "Choose a config type"
         required: true
         type: choice
-        default: "nightly"
+        default: "release"
         options:
           - release
           - nightly
@@ -31,14 +31,13 @@ on:
         description: "Whatever send to telegram ci channel or not"
         required: true
         type: choice
-        default: "true"
+        default: "false"
         options:
           - "true"
           - "false"
 
 permissions:
-  contents: write
-  discussions: write
+  contents: read
 
 jobs:
   Set-repos:
@@ -49,7 +48,7 @@ jobs:
       builddate: ${{ steps.generate-builddate.outputs.builddate }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: "Generate Matrix from config"
         id: generate-matrix
         run: |
@@ -113,7 +112,6 @@ jobs:
   Build-Kernel:
     name: "Build kernel"
     runs-on: ubuntu-24.04
-    continue-on-error: true
     needs:
       - Set-repos
     strategy:
@@ -175,7 +173,7 @@ jobs:
           echo "CACHE_KEY=$(echo -n "${{ env.KERNEL_DEVICE_VENDOR }}-${{ env.KERNEL_DEVICE }}-${{ env.KERNEL_NAME }}" | sha1sum | cut -c1-12)" >> $GITHUB_OUTPUT
       - name: "Cache ccache files"
         if: ${{ env.ccache == 'true' }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.ccache
@@ -201,8 +199,6 @@ jobs:
           git clone --recursive --depth=1 -j $(nproc) --branch $KERNEL_BRANCH $KERNEL_REPO $KERNEL_NAME
           echo -e "\n ! Kernel is at commit: $(git -C $KERNEL_NAME rev-parse HEAD)\n"
           echo "Clone kernel source => ($KERNEL_REPO)"
-          echo "KERNEL_COMMIT_HASH=$(git -C $KERNEL_NAME rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "KERNEL_COMMIT_HASH=$(git -C $KERNEL_NAME rev-parse HEAD)" >> $GITHUB_OUTPUT
       - name: "Get toolchains"
         env:
           toolchains: "${{ toJSON(matrix.repos.toolchains) }}"
@@ -321,7 +317,6 @@ jobs:
             echo "PATHMASK_ARTIFACT=${name}_PathMask_ksu" >> $GITHUB_ENV
 
       - name: "Integrate Kernel Root implementation"
-        id: integrate-kernelsu-next
         working-directory: ${{ env.KERNEL_NAME }}
         env:
           arch: ${{ steps.generate-args.outputs.ARCH }}
@@ -329,14 +324,7 @@ jobs:
         run: |
           echo "" > .scmversion
           curl -LSs "${{ env.kernelSUsetupLink }}" | bash -s ${{ env.kernelSUsetupArg }}
-          if [ -d "${{ env.kernelSUsetupName }}/.git" ]; then
-            KERNELSU_TYPE_ROOT_IMPL_VERSION=$(cd ${{ env.kernelSUsetupName }} && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
-          else
-            KERNELSU_TYPE_ROOT_IMPL_VERSION=10200
-            echo "Vendored KernelSU-Next: using fixed version metadata"
-          fi
-          echo -e "\nKernelSU Type Root Implementation version: $KERNELSU_TYPE_ROOT_IMPL_VERSION\n"
-          echo -e "KERNELSU_TYPE_ROOT_IMPL_VERSION=$KERNELSU_TYPE_ROOT_IMPL_VERSION" >> $GITHUB_OUTPUT
+          cat kernelsu/KernelSU-Next/UPSTREAM
           cd scripts
           sed -i 's/ -dirty//g' setlocalversion
       - name: "Run Additional Script"
@@ -365,6 +353,7 @@ jobs:
         env:
           args: ${{ steps.generate-args.outputs.args }}
         run: |
+          set -o pipefail
           echo "========================================"
           echo "         MoonWake Kernel Builder        "
           echo "========================================"
@@ -401,9 +390,17 @@ jobs:
           echo "ccache Enabled    : ${{ matrix.repos.ccache }}"
           echo "========================================"
           echo "Now building kernel"
-          make ${{ env.args }} ${{ env.build_out }} V=0 2>&1 | \
+          set +e
+          make ${{ env.args }} ${{ env.build_out }} V=0 2>&1 | tee /tmp/kernel-build.log | \
             grep --line-buffered --color=always -E \
             'warning:|error:|undefined reference|No rule to make target|KernelSU|SUSFS|LTO|MODPOST|VMLINUX|^[[:space:]]*(GEN|KSYM|SORTEX|SYSMAP|OBJCOPY|GZIP|DTC|CAT)\b'
+          build_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$build_status" -ne 0 ]; then
+            echo "Build failed with status $build_status"
+            tail -n 200 /tmp/kernel-build.log
+            exit "$build_status"
+          fi
           echo "Build finished!"
       - name: "Run Additional Script"
         working-directory: ${{ env.KERNEL_NAME }}
@@ -528,20 +525,15 @@ jobs:
             rm -f "$base" dtb
           fi
 
-      - name: "Export version and hash"
-        working-directory: ${{ env.KERNEL_NAME }}
-        run: |
-          echo "KERNEL_VERSION_LATEST=$(git ls-remote --tags origin | awk -F'/' '{print $3}' | sort -V | tail -n 1)" >> $GITHUB_ENV
-          echo "KERNEL_VERSION_HASH=$(git rev-parse --short=7 HEAD)" >> $GITHUB_ENV
-
       - name: "Verify susfs kernel integration"
         run: |
           set +e
           mkdir -p verify
           echo "===== .config susfs flags ====="
           grep -E "^CONFIG_KSU" ${{ env.OUT_DIR }}/.config | sort | tee verify/ksu-config.txt
-          echo "===== KSU-Next checkout ====="
-          git -C ${{ env.KERNEL_NAME }}/KernelSU-Next log -1 --format='%H %s' | tee verify/ksu-next-commit.txt
+          echo "===== KSU-Next vendored metadata ====="
+          cat "${{ env.KERNEL_NAME }}/kernelsu/KernelSU-Next/UPSTREAM" | tee verify/ksu-next-commit.txt
+          echo "KSU_VERSION_OVERRIDE=${{ matrix.repos.params.externalCommand.KSU_VERSION_OVERRIDE }}" | tee -a verify/ksu-next-commit.txt
           echo "===== System.map susfs symbols ====="
           grep -E "susfs_|ksu_handle_sys_reboot" ${{ env.OUT_DIR }}/System.map | sort -k3 | tee verify/susfs-symbols.txt
           echo "===== dispatch constants in ksu_handle_sys_reboot ====="

@@ -28,8 +28,9 @@
 
 ## 4. KernelSU-Next
 
-- 来源：`XDL-MoonWake/KernelSU-Next` / `cQwQcsleep/KernelSU-Next`
+- 来源：`cQwQcsleep/KernelSU-Next`
 - 分支：`legacy-susfs-v2-susmount`
+- 固定提交：`75143d56970811a9bb7a008dec40832155000c17`
 - `kernel/LICENSE`：GPL-2.0（内核内组件）
 - 根目录 `LICENSE`：GPL-3.0（管理器/用户态）
 - 状态：内核组件明确；管理器作为独立用户态程序分发
