@@ -10,9 +10,9 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` |
-| 版本标识 | `mwk-2.7.0-c2` |
-| 构建配置 | `configs/release/compression-c2.json` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` / `4.19.325-MoonWake-2.7.0-C2A` |
+| 版本标识 | `mwk-2.7.0-c2` / `mwk-2.7.0-c2a` |
+| 构建配置 | C2：`configs/release/compression-c2.json`<br>C2A：`configs/release/compression-c2a.json` |
 
 ## 包含的内容
 
@@ -55,6 +55,8 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 - `MoonWake_2.7.0_C2_ak3.zip`：AnyKernel3 刷机包（workflow artifact）
 - `verify-<run_number>`：验证产物，包含 `MoonWake_2.7.0_C2_config.txt`、`MoonWake_2.7.0_C2_System.map`、`MoonWake_2.7.0_C2_ksu.txt`
+
+选择 `compression-c2a.json` 时，产物名相应变为 `MoonWake_2.7.0_C2A_*`，内核版本为 `4.19.325-MoonWake-2.7.0-C2A`。
 
 ## 刷入后检查
 
