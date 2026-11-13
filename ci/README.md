@@ -18,13 +18,11 @@ GitHub Actions -> Build MoonWake Kernel -> Run workflow:
 
 Outputs:
 
-- `MoonWake_2.7.0_C2_ak3.zip`
-- `MoonWake_2.7.0_C2_config.txt`
-- `MoonWake_2.7.0_C2_System.map`
-- `MoonWake_2.7.0_C2_ksu.txt`
+- `MoonWake_2.7.0_C2_ak3.zip`: AnyKernel3 flashable zip artifact.
+- `verify-<run_number>`: verification artifact containing `MoonWake_2.7.0_C2_config.txt`, `MoonWake_2.7.0_C2_System.map`, and `MoonWake_2.7.0_C2_ksu.txt`.
 
 ## Vendored dependencies
 
 - `anykernel3/` is vendored; the workflow uses it directly (`AnyKernel3.repo = local`).
-- `kernelsu/KernelSU-Next/` is vendored; `ci/ksun-moonwake.sh` uses it directly.
+- `kernelsu/KernelSU-Next/` is vendored; `ci/ksun-moonwake.sh` uses it directly. Its upstream branch and commit are recorded in `kernelsu/KernelSU-Next/UPSTREAM`, and the build pins `KSU_VERSION_OVERRIDE` from `configs/release/compression-c2.json`.
 - The clang toolchain is still downloaded as a compiler binary; it is not a project source dependency.

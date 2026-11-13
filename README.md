@@ -9,8 +9,9 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 设备 | Xiaomi ruby |
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
+| KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
 | 版本名 | `4.19.325-MoonWake-2.7.0-C2` |
-| Release | `mwk-2.7.0-c2` |
+| 版本标识 | `mwk-2.7.0-c2` |
 | 构建配置 | `configs/release/compression-c2.json` |
 
 ## 包含的内容
@@ -37,6 +38,8 @@ arch/ fs/ mm/ drivers/ ...
 
 AnyKernel3 和 KernelSU-Next 已放在仓库内，构建时直接使用。只有 clang 工具链是外部下载。
 
+KernelSU-Next 的上游来源与固定版本记录在 `kernelsu/KernelSU-Next/UPSTREAM`，构建时通过 `KSU_VERSION_OVERRIDE` 固定版本号，避免因仓库内无 `.git` 元数据导致版本回退。
+
 ## 构建
 
 GitHub Actions → `Build MoonWake Kernel` → Run workflow：
@@ -50,12 +53,8 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 产物：
 
-```text
-MoonWake_2.7.0_C2_ak3.zip
-MoonWake_2.7.0_C2_config.txt
-MoonWake_2.7.0_C2_System.map
-MoonWake_2.7.0_C2_ksu.txt
-```
+- `MoonWake_2.7.0_C2_ak3.zip`：AnyKernel3 刷机包（workflow artifact）
+- `verify-<run_number>`：验证产物，包含 `MoonWake_2.7.0_C2_config.txt`、`MoonWake_2.7.0_C2_System.map`、`MoonWake_2.7.0_C2_ksu.txt`
 
 ## 刷入后检查
 
@@ -76,7 +75,7 @@ F2FS 需要 `/data` 超级块带有 `compression` 特性才会实际压缩。
 相对上游的内核改动：
 
 - 修改 26 个文件
-- 新增 93 个文件
+- 新增 96 个内核文件（不含 vendored KernelSU-Next / AnyKernel3）
 - 删除 0 个文件
 
 主要内容为 F2FS/ZRAM 压缩、SUS_MOUNT、MGLRU 修复、HybridMount、UFS blk-mq 和游戏/日志配置。

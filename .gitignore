@@ -135,9 +135,9 @@ all.config
 !drivers/misc/mediatek/fpsgo_cus/src/*.o
 *.orig
 out/*
-KernelSU-Next/
+/KernelSU-Next/
 drivers/kernelsu
 MoonWake-Private-*
 ksu.sh
-KernelSU/
-setup.sh
+/KernelSU/
+/setup.sh

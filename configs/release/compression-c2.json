@@ -57,7 +57,8 @@
         "STRIP": "clang-AOSP/bin/llvm-strip",
         "LDGOLD": "clang-AOSP/bin/aarch64-linux-gnu-ld.gold",
         "LLVM_AR": "clang-AOSP/bin/llvm-ar",
-        "LLVM_DIS": "clang-AOSP/bin/llvm-dis"
+        "LLVM_DIS": "clang-AOSP/bin/llvm-dis",
+        "KSU_VERSION_OVERRIDE": "33226"
       }
     },
     "AnyKernel3": {
