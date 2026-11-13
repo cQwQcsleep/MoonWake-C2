@@ -1,0 +1,7 @@
+repo=https://github.com/cQwQcsleep/KernelSU-Next
+branch=legacy-susfs-v2-susmount
+commit=75143d56970811a9bb7a008dec40832155000c17
+tag=v3.4.0-legacy-susfs-v2
+commit_count=3026
+ksu_version=33226
+KSU_VERSION_OVERRIDE=33226
