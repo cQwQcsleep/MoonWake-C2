@@ -4,20 +4,20 @@ Single repository for building MoonWake 2.7.0 C2.
 
 - Kernel source: branch `c2` (C2 commit tree)
 - CI workflow: `.github/workflows/build.yml`
-- Batch configs: `configs/release/compression-c2a.json` … `compression-c2e.json`
-- Special config: `configs/special/compression-c2f.json`
+- Batch configs: `configs/release/compression-c2a.json` … `compression-c2f.json`
+- C2G config: `configs/release/compression-c2g.json`
 - Scripts: `ci/`
 
 ## Build
 
 GitHub Actions -> Build MoonWake Kernel -> Run workflow:
 
-- Batch: `config_type=release`, leave `config_file` blank to build C2, C2A–C2E in parallel.
-- C2F special: `config_type=special`, `config_file=compression-c2f.json`.
+- Batch: `config_type=release`, leave `config_file` blank to build C2, C2A–C2F in parallel.
+- C2G: `config_type=release`, `config_file=compression-c2g.json`.
 - full_dump: false
 - send_to_telegram: false
 
-Variants: C2A (base), C2B (GPU OC), C2C (CPU 2.8GHz), C2D (GPU + CPU 2.8GHz), C2E (CPU 2.8/3.0GHz). C2F is a standalone special build combining GPU + CPU 2.8/3.0GHz.
+Variants: C2A (base), C2B (GPU OC), C2C (CPU 2.8GHz), C2D (GPU + CPU 2.8GHz), C2E (CPU 2.8/3.0GHz), C2F (GPU + CPU 2.8/3.0GHz), C2G (report tuning values).
 
 Outputs:
 

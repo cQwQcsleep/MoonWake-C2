@@ -10,7 +10,7 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2F` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2G` |
 | Release 标识 | `mwk-2.7.0-<run_number>`（每次构建一个 Release） |
 | 构建配置 | `configs/release/compression-c2*.json` |
 
