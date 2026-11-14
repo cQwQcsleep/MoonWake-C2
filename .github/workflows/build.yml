@@ -14,6 +14,7 @@ on:
         options:
           - release
           - nightly
+          - special
       config_file:
         description: "Path to a specific config JSON file (optional). Leave blank to use all configs."
         required: false
@@ -611,32 +612,28 @@ jobs:
         run: |
           rm -rf release_assets
           mkdir -p release_assets
-          for ak3 in packed_kernels/*_ak3.zip; do
-            base=$(basename "$ak3" _ak3.zip)
-            mkdir -p "release_assets/$base"
-            cp "$ak3" "release_assets/$base/"
-            find downloaded_kernels -type f -name "${base}_*" -exec cp {} "release_assets/$base/" \;
-          done
-          find release_assets -type f | sort
+          cp packed_kernels/*_ak3.zip release_assets/
+          find downloaded_kernels -type f \( -name '*_System.map' -o -name '*_config.txt' -o -name '*_ksu.txt' \) -exec cp {} release_assets/ \;
+          ls -lh release_assets
 
-      - name: "Publish GitHub Releases"
+      - name: "Publish GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mwk-2.7.0-${{ github.run_number }}
+          name: MoonWake 2.7.0 #${{ github.run_number }}
+          body: |
+            MoonWake kernel build
+
+            - Build type: `${{ github.event.inputs.config_type }}`
+            - Config file: `${{ github.event.inputs.config_file }}`
+            - Commit: `${{ github.sha }}`
+            - Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: release_assets/*
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          for dir in release_assets/*/; do
-            base=$(basename "$dir")
-            tag=$(echo "$base" | sed 's/^MoonWake_/mwk-/; s/_/-/g' | tr 'A-Z' 'a-z')-${{ github.run_number }}
-            title="$base #${{ github.run_number }}"
-            notes=$(printf 'MoonWake kernel build\n\n- Variant: `%s`\n- Build type: `%s`\n- Commit: `%s`\n- Workflow: %s' "$base" "${{ github.event.inputs.config_type }}" "${{ github.sha }}" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
-            if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-              gh release upload "$tag" "$dir"* --clobber --repo "${{ github.repository }}"
-              gh release edit "$tag" --title "$title" --notes "$notes" --repo "${{ github.repository }}"
-            else
-              gh release create "$tag" "$dir"* --title "$title" --notes "$notes" --repo "${{ github.repository }}"
-            fi
-            echo "Published $tag"
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4

@@ -11,8 +11,8 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
 | 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2F` |
-| 版本标识 | `mwk-2.7.0-c2` 至 `mwk-2.7.0-c2f` |
-| 构建配置 | `configs/release/compression-c2*.json` |
+| Release 标识 | `mwk-2.7.0-<run_number>`（每次构建一个 Release） |
+| 构建配置 | 批量：`configs/release/compression-c2*.json`<br>C2F：`configs/special/compression-c2f.json` |
 
 ### 命名规则
 
@@ -27,7 +27,9 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | C2C | 原厂 950MHz | 2800MHz | `cpu_oc_2800` |
 | C2D | 1100MHz | 2800MHz | `gpu_oc` + `cpu_oc_2800` |
 | C2E | 原厂 950MHz | 2800/3000MHz | `cpu_oc_2800` + `cpu_oc_3000` |
-| C2F | 1100MHz | 2800/3000MHz | `gpu_oc` + `cpu_oc_2800` + `cpu_oc_3000` |
+| C2F | 1100MHz | 2800/3000MHz | 独立 special 构建，包含报告中的完整 GPU+CPU 调频组合 |
+
+C2A–C2E 作为多版本批次一次性并行构建，合并发布到一个 Release；C2F 单独构建、单独发布。
 
 ## 包含的内容
 
@@ -61,24 +63,25 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 | 参数 | 值 |
 |---|---|
-| `config_type` | `release` |
-| `config_file` | 留空表示构建 `configs/release/` 下全部配置；也可填 `compression-c2f.json` 只构建单个 |
+| 批量构建 | `config_type=release`，`config_file` 留空 |
+| C2F 独立构建 | `config_type=special`，`config_file=compression-c2f.json` |
 | `full_dump` | `false` |
 | `send_to_telegram` | `false` |
 
-`config_file` 留空时，workflow matrix 会并行构建全部 6 个变体（`max-parallel: 10`），每个变体单独生成 artifact 和 Release。
+批量构建时，workflow matrix 会并行构建 `configs/release/` 下的 C2、C2A–C2E（`max-parallel: 10`），所有变体产物合并发布到**同一个 Release**。
 
 产物：
 
 - `MoonWake_2.7.0_C2_ak3.zip`：AnyKernel3 刷机包（workflow artifact）
-- `verify-<run_number>`：验证产物，包含 `MoonWake_2.7.0_C2_config.txt`、`MoonWake_2.7.0_C2_System.map`、`MoonWake_2.7.0_C2_ksu.txt`
+- `verify-<kernel>-<run_number>`：每个变体独立的验证产物，包含该变体的 config、System.map 和 ksu 元数据
 
-每次成功构建都会为每个变体单独创建 GitHub Release，tag 形如 `mwk-2.7.0-c2b-<run_number>`，附带该变体的 ak3 zip、`System.map`、config 和 ksu 元数据。
+每次成功构建只创建一个 GitHub Release，tag 形如 `mwk-2.7.0-<run_number>`，包含该次构建所有变体的 ak3 zip、`System.map`、config 和 ksu 元数据。
 
 超频说明：
 
 - GPU OC 在 `C2B/C2D/C2F` 中把 OPP 顶部两档替换为 1.1GHz/1.05GHz，使用 `POSDIV_POWER_2`，只改三套 GPU segment 表的顶部两档，不改变表长度、PTPOD 索引或 aging table。
 - CPU 2.8GHz 变体把 A78 顶档 2600MHz 替换为 2800MHz；3.0GHz 变体把顶部两档替换为 3000/2800MHz，保持频率表降序，避免报告原方案中 2600→2800→3000 的升序问题。
+- C2F 是独立 special 构建，组合 GPU 1.1GHz 与 CPU 2.8/3.0GHz，并使用报告中的目标电压（GPU 1.1GHz@881.25mV、CPU 2.8GHz@1025mV、3.0GHz@1125mV）。
 - CPU 3.0GHz 电压余量很小，建议先把 Big Cores 的 `eem_offset` 归零验证，再考虑长期使用；所有 OC 变体都应保留原 boot 镜像以便回滚。
 
 ## 刷入后检查
