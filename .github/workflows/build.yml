@@ -551,7 +551,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: "verify-${{ github.run_number }}"
+          name: "verify-${{ matrix.repos.kernelSource.name }}-${{ github.run_number }}"
           path: verify
 
       - name: "Upload AnyKernel3 zip"
