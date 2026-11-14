@@ -10,9 +10,24 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` / `-C2A` / `-C2A-OC` |
-| 版本标识 | `mwk-2.7.0-c2` / `mwk-2.7.0-c2a` / `mwk-2.7.0-c2a-oc` |
-| 构建配置 | C2：`configs/release/compression-c2.json`<br>C2A：`configs/release/compression-c2a.json`<br>C2A-OC：`configs/release/compression-c2a-oc.json` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2F` |
+| 版本标识 | `mwk-2.7.0-c2` 至 `mwk-2.7.0-c2f` |
+| 构建配置 | `configs/release/compression-c2*.json` |
+
+### 命名规则
+
+按 `C2A`、`C2B` … `C2Z` 顺序递增；26 个字母用完后进位为 `C3`，再从 `C3A`、`C3B` 继续。
+
+### C2 系列变体
+
+| 版本 | GPU | CPU A78 | 额外配置 |
+|---|---|---|---|
+| C2A | 原厂 950MHz | 原厂 2600MHz | 无 |
+| C2B | 1100MHz | 原厂 2600MHz | `gpu_oc` |
+| C2C | 原厂 950MHz | 2800MHz | `cpu_oc_2800` |
+| C2D | 1100MHz | 2800MHz | `gpu_oc` + `cpu_oc_2800` |
+| C2E | 原厂 950MHz | 2800/3000MHz | `cpu_oc_2800` + `cpu_oc_3000` |
+| C2F | 1100MHz | 2800/3000MHz | `gpu_oc` + `cpu_oc_2800` + `cpu_oc_3000` |
 
 ## 包含的内容
 
@@ -47,20 +62,24 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 | 参数 | 值 |
 |---|---|
 | `config_type` | `release` |
-| `config_file` | `compression-c2.json` |
+| `config_file` | 留空表示构建 `configs/release/` 下全部配置；也可填 `compression-c2f.json` 只构建单个 |
 | `full_dump` | `false` |
 | `send_to_telegram` | `false` |
+
+`config_file` 留空时，workflow matrix 会并行构建全部 6 个变体（`max-parallel: 10`），每个变体单独生成 artifact 和 Release。
 
 产物：
 
 - `MoonWake_2.7.0_C2_ak3.zip`：AnyKernel3 刷机包（workflow artifact）
 - `verify-<run_number>`：验证产物，包含 `MoonWake_2.7.0_C2_config.txt`、`MoonWake_2.7.0_C2_System.map`、`MoonWake_2.7.0_C2_ksu.txt`
 
-选择 `compression-c2a.json` 时，产物名相应变为 `MoonWake_2.7.0_C2A_*`，内核版本为 `4.19.325-MoonWake-2.7.0-C2A`。
+每次成功构建都会为每个变体单独创建 GitHub Release，tag 形如 `mwk-2.7.0-c2b-<run_number>`，附带该变体的 ak3 zip、`System.map`、config 和 ksu 元数据。
 
-每次成功构建都会自动创建 GitHub Release，tag 形如 `mwk-2.7.0-c2a-<run_number>`，附带 ak3 zip、`System.map`、config 和 ksu 元数据。
+超频说明：
 
-C2A-OC 使用 `compression-c2a-oc.json`，在 C2A 基础上通过 `CONFIG_MTK_GPU_OC` 将 MT6877 GPU 顶部两档替换为 1.1GHz/1.05GHz；CPU 频率表不变。GPU 超频属于实验性改动，发热/功耗会上升，刷入前请确认可回滚。
+- GPU OC 在 `C2B/C2D/C2F` 中把 OPP 顶部两档替换为 1.1GHz/1.05GHz，使用 `POSDIV_POWER_2`，只改三套 GPU segment 表的顶部两档，不改变表长度、PTPOD 索引或 aging table。
+- CPU 2.8GHz 变体把 A78 顶档 2600MHz 替换为 2800MHz；3.0GHz 变体把顶部两档替换为 3000/2800MHz，保持频率表降序，避免报告原方案中 2600→2800→3000 的升序问题。
+- CPU 3.0GHz 电压余量很小，建议先把 Big Cores 的 `eem_offset` 归零验证，再考虑长期使用；所有 OC 变体都应保留原 boot 镜像以便回滚。
 
 ## 刷入后检查
 

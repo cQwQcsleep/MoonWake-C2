@@ -6,6 +6,22 @@ config MTK_CPU_FREQ
 	  changed which will depended on CPU FREQ governor.
 	  If unsure, say N.
 
+config MTK_CPU_OC_2800
+	bool "MT6877 A78 2.8GHz overclock"
+	depends on MTK_CPU_FREQ && MACH_MT6877
+	default n
+	help
+	  Replace the top FY-segment Cortex-A78 OPP (2.6GHz) with 2.8GHz.
+	  This exceeds the vendor sign-off table and is experimental.
+
+config MTK_CPU_OC_3000
+	bool "MT6877 A78 3.0GHz overclock"
+	depends on MTK_CPU_FREQ && MACH_MT6877 && MTK_CPU_OC_2800
+	default n
+	help
+	  Replace the top two FY-segment Cortex-A78 OPPs with 3.0GHz and
+	  2.8GHz. Voltage headroom is very small; experimental only.
+
 config MTK_PTPOD
 	bool "MTK PTPOD"
 	help

@@ -3,7 +3,7 @@
     "kernelSource": {
       "device": "ruby",
       "vendor": "xiaomi",
-      "name": "MoonWake-2.7.0-C2A-OC",
+      "name": "MoonWake-2.7.0-C2B",
       "defconfig": "ruby_defconfig",
       "extraConfig": "vendor/bbr.config vendor/noop.config vendor/kernelsu.config vendor/susfs.config vendor/kernelpatch.config vendor/zram_compress.config vendor/hybridmount.config vendor/gaming_balanced.config vendor/compression.config vendor/logging-hm.config vendor/gpu_oc.config",
       "repo": "https://github.com/cQwQcsleep/MoonWake-C2",

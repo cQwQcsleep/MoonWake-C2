@@ -4,7 +4,7 @@ Single repository for building MoonWake 2.7.0 C2.
 
 - Kernel source: branch `c2` (C2 commit tree)
 - CI workflow: `.github/workflows/build.yml`
-- Build config: `configs/release/compression-c2.json`
+- Build configs: `configs/release/compression-c2a.json` … `compression-c2f.json`
 - Scripts: `ci/`
 
 ## Build
@@ -12,15 +12,17 @@ Single repository for building MoonWake 2.7.0 C2.
 GitHub Actions -> Build MoonWake Kernel -> Run workflow:
 
 - config_type: release
-- config_file: compression-c2.json
+- config_file: leave blank to build all C2A–C2F variants in parallel, or set e.g. `compression-c2f.json`
 - full_dump: false
 - send_to_telegram: false
 
+Variants: C2A (base), C2B (GPU OC), C2C (CPU 2.8GHz), C2D (GPU + CPU 2.8GHz), C2E (CPU 2.8/3.0GHz), C2F (GPU + CPU 2.8/3.0GHz).
+
 Outputs:
 
-- `MoonWake_2.7.0_C2_ak3.zip`: AnyKernel3 flashable zip artifact.
-- `verify-<run_number>`: verification artifact containing `MoonWake_2.7.0_C2_config.txt`, `MoonWake_2.7.0_C2_System.map`, and `MoonWake_2.7.0_C2_ksu.txt`.
-- GitHub Release: created automatically after every successful build, tagged like `mwk-2.7.0-c2a-<run_number>`, with the ak3 zip, System.map, config and ksu metadata attached.
+- `<kernel>_ak3.zip`: AnyKernel3 flashable zip artifact per variant.
+- `verify-<run_number>`: verification artifact containing config, System.map and ksu metadata for every variant.
+- GitHub Release: one release per variant after every successful build, tagged like `mwk-2.7.0-c2b-<run_number>`, with that variant's ak3 zip, System.map, config and ksu metadata.
 
 ## Vendored dependencies
 
