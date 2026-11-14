@@ -24,9 +24,16 @@
 #define CPU_DVFS_FREQ13_LL_FY		740000		/* KHz */
 #define CPU_DVFS_FREQ14_LL_FY		650000		/* KHz */
 #define CPU_DVFS_FREQ15_LL_FY		500000		/* KHz */
+#if defined(CONFIG_MTK_CPU_OC_FULL)
+#define CPU_DVFS_FREQ16_LL_FY		2200000		/* KHz, OC */
+#define CPU_DVFS_FREQ17_LL_FY		2100000		/* KHz, OC */
+#endif
 
 /* for DVFS OPP table B */
-#if defined(CONFIG_MTK_CPU_OC_3000)
+#if defined(CONFIG_MTK_CPU_OC_FULL)
+#define CPU_DVFS_FREQ0_L_FY		2600000		/* KHz */
+#define CPU_DVFS_FREQ1_L_FY		2400000		/* KHz */
+#elif defined(CONFIG_MTK_CPU_OC_3000)
 #define CPU_DVFS_FREQ0_L_FY		3000000		/* KHz, OC */
 #define CPU_DVFS_FREQ1_L_FY		2800000		/* KHz, OC */
 #elif defined(CONFIG_MTK_CPU_OC_2800)
@@ -88,9 +95,16 @@
 #define CPU_DVFS_VOLT13_VPROC1_FY	 67500          /* 10uV */
 #define CPU_DVFS_VOLT14_VPROC1_FY	 65000		/* 10uV */
 #define CPU_DVFS_VOLT15_VPROC1_FY	 65000		/* 10uV */
+#if defined(CONFIG_MTK_CPU_OC_FULL)
+#define CPU_DVFS_VOLT16_VPROC1_FY	106875		/* 10uV, 1068.75mV @ 2.2GHz */
+#define CPU_DVFS_VOLT17_VPROC1_FY	103750		/* 10uV, 1037.50mV @ 2.1GHz */
+#endif
 
 /* for DVFS OPP table B */
-#if defined(CONFIG_MTK_CPU_OC_3000)
+#if defined(CONFIG_MTK_CPU_OC_FULL)
+#define CPU_DVFS_VOLT0_VPROC2_FY	105000		/* 10uV */
+#define CPU_DVFS_VOLT1_VPROC2_FY	100000		/* 10uV */
+#elif defined(CONFIG_MTK_CPU_OC_3000)
 #define CPU_DVFS_VOLT0_VPROC2_FY	112500		/* 10uV, OC */
 #define CPU_DVFS_VOLT1_VPROC2_FY	102500		/* 10uV, OC */
 #elif defined(CONFIG_MTK_CPU_OC_2800)
@@ -114,8 +128,8 @@
 #define CPU_DVFS_VOLT13_VPROC2_FY	70625		/* 10uV	*/
 #define CPU_DVFS_VOLT14_VPROC2_FY	66875		/* 10uV	*/
 #define CPU_DVFS_VOLT15_VPROC2_FY	65000		/* 10uV	*/
-#define CPU_DVFS_VOLT16_VPROC2_FY	112500		/* 10uV, OC */
-#define CPU_DVFS_VOLT17_VPROC2_FY	102500		/* 10uV, OC */
+#define CPU_DVFS_VOLT16_VPROC2_FY	115000		/* 10uV, 1150.00mV @ 3.0GHz */
+#define CPU_DVFS_VOLT17_VPROC2_FY	110000		/* 10uV, 1100.00mV @ 2.8GHz */
 
 /* for DVFS OPP table CCI */
 #define CPU_DVFS_VOLT0_VPROC3_FY	 100000			/* 10uV */
@@ -393,9 +407,9 @@ static struct mt_cpu_freq_info opp_tbl_##cluster##_e##lv##_0[] = {        \
 (CPU_DVFS_FREQ15_##cluster##_##seg, CPU_DVFS_VOLT15_VPROC##vol##_##seg), \
 }
 
-/* 18-step FY L table used by the full OC build: 3.0/2.8GHz on top,
+/* 18-step FY table used by the full OC build: two new top steps,
  * followed by the original 16 sign-off steps. */
-#define OPP_TBL_L_FY_OC18(cluster, seg, lv, vol)	\
+#define OPP_TBL_FY_OC18(cluster, seg, lv, vol)	\
 static struct mt_cpu_freq_info opp_tbl_##cluster##_e##lv##_0[] = {        \
 	OP(CPU_DVFS_FREQ16_##cluster##_##seg, CPU_DVFS_VOLT16_VPROC##vol##_##seg), \
 	OP(CPU_DVFS_FREQ17_##cluster##_##seg, CPU_DVFS_VOLT17_VPROC##vol##_##seg), \
@@ -417,10 +431,11 @@ static struct mt_cpu_freq_info opp_tbl_##cluster##_e##lv##_0[] = {        \
 	OP(CPU_DVFS_FREQ15_##cluster##_##seg, CPU_DVFS_VOLT15_VPROC##vol##_##seg), \
 }
 
-OPP_TBL(LL,   FY, 0, 1); /* opp_tbl_LL_e0_0   */
 #if defined(CONFIG_MTK_CPU_OC_FULL)
-OPP_TBL_L_FY_OC18(L, FY, 0, 2); /* opp_tbl_L_e0_0, 18 steps */
+OPP_TBL_FY_OC18(LL, FY, 0, 1); /* opp_tbl_LL_e0_0, 18 steps */
+OPP_TBL_FY_OC18(L, FY, 0, 2); /* opp_tbl_L_e0_0, 18 steps */
 #else
+OPP_TBL(LL,   FY, 0, 1); /* opp_tbl_LL_e0_0   */
 OPP_TBL(L,  FY, 0, 2); /* opp_tbl_L_e0_0  */
 #endif
 OPP_TBL(CCI, FY, 0, 3); /* opp_tbl_CCI_e0_0 */
@@ -468,6 +483,10 @@ static struct opp_tbl_info opp_tbls[NR_MT_CPU_DVFS][NUM_CPU_LEVEL] = {
 /* 16 steps OPP table */
 static struct mt_cpu_freq_method opp_tbl_method_LL_FY[] = {	/* 6885 */
 	/* POS,	CLK */
+#if defined(CONFIG_MTK_CPU_OC_FULL)
+	FP(1,	1),
+	FP(1,	1),
+#endif
 	FP(1,	1),
 	FP(1,	1),
 	FP(1,	1),

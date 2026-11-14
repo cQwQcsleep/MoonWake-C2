@@ -1228,6 +1228,12 @@ static int _mt_cpufreq_init(struct cpufreq_policy *policy)
 
 		p->cpu_level = lv;
 
+		/* The FY full-OC table has 18 steps; keep the default
+		 * lowest-OPP index valid for both 16-step and 18-step tables.
+		 */
+		if (p->idx_opp_ppm_base >= p->nr_opp_tbl)
+			p->idx_opp_ppm_base = p->nr_opp_tbl - 1;
+
 		ret = _mt_cpufreq_setup_freqs_table(policy,
 		opp_tbl_info->opp_tbl, opp_tbl_info->size);
 
