@@ -25,6 +25,15 @@ config MTK_GPU_COMMON_DVFS_SUPPORT
 	  It is nice method to save power
 	  It is recommended to enable it when MTK_GPU_SUPPORT is enabled
 
+config MTK_GPU_OC
+	bool "Enable MT6877 GPU overclock to 1.1GHz"
+	depends on MTK_GPU_SUPPORT && MACH_MT6877
+	default n
+	help
+	  Replace the top two MT6877 GPU OPPs with 1.1GHz and 1.05GHz.
+	  This exceeds the vendor sign-off frequency/voltage table and is
+	  only intended for experimental OC builds.
+
 config SW_SYNC64
 	bool "Enable SW 64bit sync counter"
 	depends on SW_SYNC

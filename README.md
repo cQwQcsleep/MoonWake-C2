@@ -10,9 +10,9 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` / `4.19.325-MoonWake-2.7.0-C2A` |
-| 版本标识 | `mwk-2.7.0-c2` / `mwk-2.7.0-c2a` |
-| 构建配置 | C2：`configs/release/compression-c2.json`<br>C2A：`configs/release/compression-c2a.json` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` / `-C2A` / `-C2A-OC` |
+| 版本标识 | `mwk-2.7.0-c2` / `mwk-2.7.0-c2a` / `mwk-2.7.0-c2a-oc` |
+| 构建配置 | C2：`configs/release/compression-c2.json`<br>C2A：`configs/release/compression-c2a.json`<br>C2A-OC：`configs/release/compression-c2a-oc.json` |
 
 ## 包含的内容
 
@@ -59,6 +59,8 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 选择 `compression-c2a.json` 时，产物名相应变为 `MoonWake_2.7.0_C2A_*`，内核版本为 `4.19.325-MoonWake-2.7.0-C2A`。
 
 每次成功构建都会自动创建 GitHub Release，tag 形如 `mwk-2.7.0-c2a-<run_number>`，附带 ak3 zip、`System.map`、config 和 ksu 元数据。
+
+C2A-OC 使用 `compression-c2a-oc.json`，在 C2A 基础上通过 `CONFIG_MTK_GPU_OC` 将 MT6877 GPU 顶部两档替换为 1.1GHz/1.05GHz；CPU 频率表不变。GPU 超频属于实验性改动，发热/功耗会上升，刷入前请确认可回滚。
 
 ## 刷入后检查
 
