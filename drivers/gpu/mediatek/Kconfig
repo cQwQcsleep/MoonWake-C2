@@ -34,6 +34,15 @@ config MTK_GPU_OC
 	  This exceeds the vendor sign-off frequency/voltage table and is
 	  only intended for experimental OC builds.
 
+config MTK_GPU_OC_FULL
+	bool "Enable MT6877 GPU full 40-step OC table"
+	depends on MTK_GPU_SUPPORT && MACH_MT6877
+	default n
+	help
+	  Insert 1.1GHz and 1.05GHz on top of the original 38 GPU OPP
+	  steps, and update the PTPOD index and aging tables accordingly.
+	  Experimental only.
+
 config SW_SYNC64
 	bool "Enable SW 64bit sync counter"
 	depends on SW_SYNC

@@ -22,6 +22,14 @@ config MTK_CPU_OC_3000
 	  Replace the top two FY-segment Cortex-A78 OPPs with 3.0GHz and
 	  2.8GHz. Voltage headroom is very small; experimental only.
 
+config MTK_CPU_OC_FULL
+	bool "MT6877 A78 full 18-step OC table"
+	depends on MTK_CPU_FREQ && MACH_MT6877
+	default n
+	help
+	  Insert 3.0GHz and 2.8GHz on top of the original 16 FY-segment
+	  Cortex-A78 OPP steps, preserving 2.6GHz/2.4GHz. Experimental only.
+
 config MTK_PTPOD
 	bool "MTK PTPOD"
 	help

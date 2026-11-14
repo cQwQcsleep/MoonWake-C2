@@ -5,7 +5,7 @@
       "vendor": "xiaomi",
       "name": "MoonWake-2.7.0-C2G",
       "defconfig": "ruby_defconfig",
-      "extraConfig": "vendor/bbr.config vendor/noop.config vendor/kernelsu.config vendor/susfs.config vendor/kernelpatch.config vendor/zram_compress.config vendor/hybridmount.config vendor/gaming_balanced.config vendor/compression.config vendor/logging-hm.config vendor/gpu_oc.config vendor/cpu_oc_2800.config vendor/cpu_oc_3000.config",
+      "extraConfig": "vendor/bbr.config vendor/noop.config vendor/kernelsu.config vendor/susfs.config vendor/kernelpatch.config vendor/zram_compress.config vendor/hybridmount.config vendor/gaming_balanced.config vendor/compression.config vendor/logging-hm.config vendor/gpu_oc_full.config vendor/cpu_oc_full.config",
       "repo": "https://github.com/cQwQcsleep/MoonWake-C2",
       "branch": "c2"
     },

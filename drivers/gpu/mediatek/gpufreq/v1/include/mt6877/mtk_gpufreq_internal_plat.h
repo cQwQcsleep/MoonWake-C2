@@ -21,7 +21,11 @@
  **************************************************/
 #define MT_GPUFREQ_DVFS_ENABLE          1
 #define MT_GPUFREQ_CUST_CONFIG          0
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+#define MT_GPUFREQ_CUST_INIT_OPP        (g_opp_table_segment_1[18].gpufreq_khz)
+#else
 #define MT_GPUFREQ_CUST_INIT_OPP        (g_opp_table_segment_1[16].gpufreq_khz)
+#endif
 
 /**************************************************
  * DVFS Setting
@@ -366,17 +370,29 @@ struct opp_table_info *g_opp_table;
  * PTPOD definition
  **************************************************/
 unsigned int g_ptpod_opp_idx_table_segment[] = {
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	 2,  5,  7, 11,
+	14, 17, 20, 23,
+	25, 27, 29, 31,
+	33, 35, 37, 39
+#else
 	 0,  3,  5,  9,
 	12, 15, 18, 21,
 	23, 25, 27, 29,
 	31, 33, 35, 37
+#endif
 };
 
 /**************************************************
  * GPU OPP table definition
  **************************************************/
 struct opp_table_info g_opp_table_segment_1[] = {
-#ifdef CONFIG_MTK_GPU_OC
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
+	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
+	GPUOP(950000, 78125, 78125, POSDIV_POWER_4, 1875), /* 2 sign off */
+	GPUOP(938000, 77500, 77500, POSDIV_POWER_4, 1875), /* 3 */
+#elif defined(CONFIG_MTK_GPU_OC)
 	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
 	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
 #else
@@ -422,7 +438,12 @@ struct opp_table_info g_opp_table_segment_1[] = {
 };
 
 struct opp_table_info g_opp_table_segment_2[] = {
-#ifdef CONFIG_MTK_GPU_OC
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
+	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
+	GPUOP(950000, 78125, 78125, POSDIV_POWER_4, 1875), /* 2 sign off */
+	GPUOP(938000, 77500, 77500, POSDIV_POWER_4, 1875), /* 3 */
+#elif defined(CONFIG_MTK_GPU_OC)
 	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
 	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
 #else
@@ -468,7 +489,12 @@ struct opp_table_info g_opp_table_segment_2[] = {
 };
 
 struct opp_table_info g_opp_table_segment_3[] = {
-#ifdef CONFIG_MTK_GPU_OC
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
+	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
+	GPUOP(950000, 78125, 78125, POSDIV_POWER_4, 1875), /* 2 sign off */
+	GPUOP(938000, 77500, 77500, POSDIV_POWER_4, 1875), /* 3 */
+#elif defined(CONFIG_MTK_GPU_OC)
 	GPUOP(1100000, 88125, 88125, POSDIV_POWER_2, 1875), /* 0 OC */
 	GPUOP(1050000, 85000, 85000, POSDIV_POWER_2, 1875), /* 1 OC */
 #else
@@ -526,19 +552,31 @@ struct g_asensor_info {
 };
 unsigned int g_aging_table[][NUM_OF_OPP_IDX] = {
 	/* Aging Table 0 */
-	{1875, 1875, 1875, 1875, 1875, 1875, 1875, 1875,
+	{
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	 1875, 1875,
+#endif
+	 1875, 1875, 1875, 1875, 1875, 1875, 1875, 1875,
 	 1875, 1875, 1875, 1875, 1875, 1875, 1875, 1250,
 	 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250,
 	 1250, 1250, 1250,  625,  625,  625,  625,  625,
 	  625,  625,  625,  625,  625,  625},
 	/* Aging Table 1 */
-	{1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250,
+	{
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	 1250, 1250,
+#endif
+	 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250,
 	 1250, 1250, 1250, 1250, 1250, 1250, 1250,  625,
 	  625,  625,  625,  625,  625,  625,  625,  625,
 	  625,  625,  625,    0,    0,    0,    0,    0,
 	    0,    0,    0,    0,    0,    0},
 	/* Aging Table 2 */
-	{ 625,  625,  625,  625,  625,  625,  625,  625,
+	{
+#if defined(CONFIG_MTK_GPU_OC_FULL)
+	  625,  625,
+#endif
+	  625,  625,  625,  625,  625,  625,  625,  625,
 	  625,  625,  625,  625,  625,  625,  625,    0,
 	    0,    0,    0,    0,    0,    0,    0,    0,
 	    0,    0,    0,    0,    0,    0,    0,    0,

@@ -28,7 +28,7 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | C2D | 1100MHz | 2800MHz | `gpu_oc` + `cpu_oc_2800` |
 | C2E | 原厂 950MHz | 2800/3000MHz | `cpu_oc_2800` + `cpu_oc_3000` |
 | C2F | 1100MHz | 2800/3000MHz | `gpu_oc` + `cpu_oc_2800` + `cpu_oc_3000` |
-| C2G | 1100MHz | 2800/3000MHz | 报告中的精细化调频参数（GPU 881.25mV / CPU 1025mV、1125mV） |
+| C2G | 1100MHz | 2800/3000MHz | 完整插档：GPU 40 档、CPU A78 18 档（3.0/2.8GHz 置顶，保留原 2600/2400 等档位） |
 
 C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建。
 
@@ -82,7 +82,7 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 - GPU OC 在 `C2B/C2D/C2F` 中把 OPP 顶部两档替换为 1.1GHz/1.05GHz，使用 `POSDIV_POWER_2`，只改三套 GPU segment 表的顶部两档，不改变表长度、PTPOD 索引或 aging table。
 - CPU 2.8GHz 变体把 A78 顶档 2600MHz 替换为 2800MHz；3.0GHz 变体把顶部两档替换为 3000/2800MHz，保持频率表降序，避免报告原方案中 2600→2800→3000 的升序问题。
-- C2G 组合 GPU 1.1GHz 与 CPU 2.8/3.0GHz，并使用报告中的目标电压（GPU 1.1GHz@881.25mV、CPU 2.8GHz@1025mV、3.0GHz@1125mV）。
+- C2G 使用完整插档：GPU 由 38 档扩展为 40 档（插入 1.1GHz/1.05GHz，并同步 PTPOD 与 aging table）；CPU A78 由 16 档扩展为 18 档（插入 3.0GHz/2.8GHz，保留原 2.6GHz/2.4GHz 等档位）。电压使用报告值（GPU 1.1GHz@881.25mV、CPU 2.8GHz@1025mV、3.0GHz@1125mV）。
 - CPU 3.0GHz 电压余量很小，建议先把 Big Cores 的 `eem_offset` 归零验证，再考虑长期使用；所有 OC 变体都应保留原 boot 镜像以便回滚。
 
 ## 刷入后检查
