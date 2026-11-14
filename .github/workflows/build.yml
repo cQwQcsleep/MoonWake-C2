@@ -14,7 +14,6 @@ on:
         options:
           - release
           - nightly
-          - special
       config_file:
         description: "Path to a specific config JSON file (optional). Leave blank to use all configs."
         required: false
