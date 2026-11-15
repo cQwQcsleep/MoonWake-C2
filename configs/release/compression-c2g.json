@@ -1,5 +1,7 @@
 [
   {
+    "deprecated": true,
+    "deprecated_reason": "C2G is content-identical to C2H in this tree (same extraConfig, same KCFLAGS, same KSU pin); the 18-step CPU table it was named after no longer exists here, and it is known to park the second cluster at the wrong frequency at idle. Batch mode skips it via ci/gen-matrix.sh; archive the historical artifact elsewhere if it must be reproduced.",
     "kernelSource": {
       "device": "ruby",
       "vendor": "xiaomi",
