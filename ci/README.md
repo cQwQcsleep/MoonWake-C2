@@ -4,7 +4,7 @@ Single repository for building MoonWake 2.7.0 C2 (Xiaomi `ruby`, MT6877, Linux 4
 
 - Kernel source: branch `c2`
 - CI workflow: `.github/workflows/build.yml` (thin orchestration only)
-- Release configs: `configs/release/compression-c2.json` … `compression-c2h.json`
+- Release configs: `configs/release/compression-c2.json` … `compression-c2h-plans.json`
 - Vendored deps: `anykernel3/`, `kernelsu/KernelSU-Next/`
 
 ## Build
@@ -14,11 +14,17 @@ GitHub Actions → Build MoonWake Kernel → Run workflow:
 - Batch: `config_type=release`, leave `config_file` blank. Builds every config in
   `configs/release/` that is **not** marked `"deprecated": true` (currently C2, C2A–C2F, C2H).
 - Single variant: `config_type=release`, `config_file=compression-c2h.json`.
+- C2H frequency plans: `config_type=release`, `config_file=compression-c2h-plans.json`.
+  The file holds all three variants, so one run builds V1/V2/V3 in parallel and publishes
+  them into one Release.
 - `full_dump` / `send_to_telegram`: `false` unless you want the dump artifact / channel push.
 
 Variants: C2A (base), C2B (GPU OC), C2C (CPU 2.8 GHz), C2D (GPU + CPU 2.8 GHz),
 C2E (CPU 2.8/3.0 GHz), C2F (GPU + CPU 2.8/3.0 GHz), C2H (16-slot CPU OC with matching
-MCUPM/PVT table).
+MCUPM/PVT table), C2H-V1 (rearranged, A78 650MHz / A55 500MHz minimum), C2H-V2
+(aggressive low, A78 400MHz / A55 300MHz), C2H-V3 (moderate low, A78 500MHz / A55 400MHz).
+The three C2H plans are selected by mutually exclusive `CONFIG_MTK_CPU_FREQ_V1/V2/V3`
+fragments and each also patches the MCUPM/PVT table.
 
 **C2G is deprecated.** Its config is byte-identical to C2H apart from the name — the
 18-step CPU table it was named after no longer exists in this tree, and it is known to

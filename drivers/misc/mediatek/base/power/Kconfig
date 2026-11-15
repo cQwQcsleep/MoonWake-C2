@@ -33,6 +33,32 @@ config MTK_CPU_OC_FULL
 	  16 OPP slots; indices above 15 are truncated.
 	  Experimental only.
 
+config MTK_CPU_FREQ_V1
+	bool "MT6877 C2H V1 CPU frequency plan (rearranged)"
+	depends on MTK_CPU_FREQ && MACH_MT6877
+	default n
+	help
+	  Rearranged 16-step FY tables: A78 minimum 650MHz @ 550mV,
+	  A55 minimum 500MHz @ 550mV. Low risk.
+
+config MTK_CPU_FREQ_V2
+	bool "MT6877 C2H V2 CPU frequency plan (aggressive low)"
+	depends on MTK_CPU_FREQ && MACH_MT6877
+	default n
+	help
+	  Aggressive low-frequency plan: A78 minimum 400MHz @ 500mV,
+	  A55 minimum 300MHz @ 500mV. The 300MHz step needs a 1.2GHz
+	  ARMPLL output, which is close to the synthesizer limit. High risk.
+
+config MTK_CPU_FREQ_V3
+	bool "MT6877 C2H V3 CPU frequency plan (moderate low)"
+	depends on MTK_CPU_FREQ && MACH_MT6877
+	default n
+	help
+	  Moderate low-frequency plan: A78 minimum 500MHz @ 525mV,
+	  A55 minimum 400MHz @ 525mV. All PLL outputs stay at or above
+	  1.6GHz. Medium risk.
+
 config MTK_PTPOD
 	bool "MTK PTPOD"
 	help

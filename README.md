@@ -10,7 +10,7 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2H` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2H-V3` |
 | Release 标识 | `mwk-2.7.0-<run_number>`（每次构建一个 Release） |
 | 构建配置 | `configs/release/compression-c2*.json` |
 
@@ -30,8 +30,13 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | C2F | 1100MHz | 2800/3000MHz | `gpu_oc` + `cpu_oc_2800` + `cpu_oc_3000` |
 | C2G | 1100MHz | 2800/3000MHz | 完整插档：GPU 40 档、CPU A78 18 档（MCUPM 只有 16 槽，18 档索引会被截断，实际不可用） |
 | C2H | 1100MHz | 2800/3000MHz | 修正版：GPU 40 档、CPU 16 档（3.0/2.8GHz 与 2.2/2.1GHz 替换两个原厂中频，同步修正 MCUPM/PVT 表） |
+| C2H-V1 | 1100MHz | 3000…650MHz | 纯重排：A78 最低 650MHz@550mV，A55 最低 500MHz@550mV，低风险 |
+| C2H-V2 | 1100MHz | 3000…400MHz | 激进下探：A78 最低 400MHz@500mV，A55 最低 300MHz@500mV，PLL 1.2GHz 临界，高风险 |
+| C2H-V3 | 1100MHz | 3000…500MHz | 温和下探：A78 最低 500MHz@525mV，A55 最低 400MHz@525mV，PLL ≥1.6GHz，中风险 |
 
-C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建；C2H 修正 C2G 的 CPU 档位与 MCUPM 索引不匹配问题。
+C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建；C2H 修正 C2G 的 CPU 档位与 MCUPM 索引不匹配问题；C2H-V1/V2/V3 共用 `compression-c2h-plans.json` 一次性并行构建并合并发布。
+
+三套 C2H 频点方案的 OPP 表、PLL 分频和 MCUPM/PVT 表由 `CONFIG_MTK_CPU_FREQ_V1/V2/V3` 切换，三个变体互斥；未选择时回落到 C2H 基线表。
 
 ## 包含的内容
 
@@ -67,10 +72,12 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 |---|---|
 | 批量构建 | `config_type=release`，`config_file` 留空 |
 | C2G 构建 | `config_type=release`，`config_file=compression-c2g.json` |
+| C2H 构建 | `config_type=release`，`config_file=compression-c2h.json` |
+| C2H 三方案 | `config_type=release`，`config_file=compression-c2h-plans.json`（V1/V2/V3 并行，合并发布） |
 | `full_dump` | `false` |
 | `send_to_telegram` | `false` |
 
-批量构建时，workflow matrix 会并行构建 `configs/release/` 下的 C2、C2A–C2F（`max-parallel: 10`），所有变体产物合并发布到**同一个 Release**。
+批量构建时，workflow matrix 会并行构建 `configs/release/` 下所有未标记 `deprecated` 的配置（`max-parallel: 10`），所有变体产物合并发布到**同一个 Release**。
 
 产物：
 
