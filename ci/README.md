@@ -19,6 +19,9 @@ GitHub Actions → Build MoonWake Kernel → Run workflow:
   them into one Release.
 - C2K: `config_type=release`, `config_file=compression-c2k.json`. The config pins
   `branch=c2k`, which carries the schedutil upgrade.
+- C2K frequency plans: `config_type=release`, `config_file=compression-c2k-plans.json`.
+  Builds C2K-V1/V2/V3 in parallel on the same `c2k` branch and publishes them into one
+  Release.
 - `full_dump` / `send_to_telegram`: `false` unless you want the dump artifact / channel push.
 
 Variants: C2A (base), C2B (GPU OC), C2C (CPU 2.8 GHz), C2D (GPU + CPU 2.8 GHz),
@@ -26,7 +29,8 @@ C2E (CPU 2.8/3.0 GHz), C2F (GPU + CPU 2.8/3.0 GHz), C2H (16-slot CPU OC with mat
 MCUPM/PVT table), C2H-V1 (rearranged, A78 650MHz / A55 500MHz minimum), C2H-V2
 (aggressive low, A78 400MHz / A55 300MHz), C2H-V3 (moderate low, A78 500MHz / A55 400MHz),
 C2K (C2H baseline + schedutil upgrade: uclamp cap, iowait rewrite, fixed reference
-frequency, shared `effective_cpu_util()`).
+frequency, shared `effective_cpu_util()`), C2K-V1/V2/V3 (same schedutil upgrade with the
+three frequency plans).
 The three C2H plans are selected by mutually exclusive `CONFIG_MTK_CPU_FREQ_V1/V2/V3`
 fragments and each also patches the MCUPM/PVT table.
 

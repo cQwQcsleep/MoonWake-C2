@@ -34,8 +34,11 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | C2H-V2 | 1100MHz | 3000…400MHz | 激进下探：A78 最低 400MHz@500mV，A55 最低 300MHz@500mV，PLL 1.2GHz 临界，高风险 |
 | C2H-V3 | 1100MHz | 3000…500MHz | 温和下探：A78 最低 500MHz@525mV，A55 最低 400MHz@525mV，PLL ≥1.6GHz，中风险 |
 | C2K | 1100MHz | 2800/3000MHz | schedutil 升级版（C2H 基线频点）：uclamp 封顶修复、iowait boost 重写、固定参考频率、`effective_cpu_util()` 统一口径 |
+| C2K-V1 | 1100MHz | 3000…650MHz | C2K + V1 纯重排（A78 650MHz / A55 500MHz 最低） |
+| C2K-V2 | 1100MHz | 3000…400MHz | C2K + V2 激进下探（A78 400MHz / A55 300MHz） |
+| C2K-V3 | 1100MHz | 3000…500MHz | C2K + V3 温和下探（A78 500MHz / A55 400MHz） |
 
-C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建；C2H 修正 C2G 的 CPU 档位与 MCUPM 索引不匹配问题；C2H-V1/V2/V3 共用 `compression-c2h-plans.json` 一次性并行构建并合并发布；C2K 在独立 `c2k` 分支上构建。
+C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建；C2H 修正 C2G 的 CPU 档位与 MCUPM 索引不匹配问题；C2H-V1/V2/V3 共用 `compression-c2h-plans.json` 一次性并行构建并合并发布；C2K 在独立 `c2k` 分支上构建；C2K-V1/V2/V3 共用 `compression-c2k-plans.json` 并行构建并合并发布。
 
 三套 C2H 频点方案的 OPP 表、PLL 分频和 MCUPM/PVT 表由 `CONFIG_MTK_CPU_FREQ_V1/V2/V3` 切换，三个变体互斥；未选择时回落到 C2H 基线表。
 
