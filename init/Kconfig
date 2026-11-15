@@ -1136,6 +1136,39 @@ config SCHED_AUTOGROUP
 	  desktop applications.  Task group autogeneration is currently based
 	  upon task session.
 
+config SCHED_THERMAL_PRESSURE
+	bool "Enable periodic scheduling thermal pressure tracking" if EXPERT
+	default y
+	depends on SMP
+	help
+	  This option enables tracking of the average thermal pressure of a
+	  CPU. Thermal pressure is the delta between the maximum possible
+	  capacity of a CPU and the capacity currently available because of
+	  thermal capping. The scheduler uses it to estimate the deliverable
+	  capacity of a CPU and to account for the reduced capacity during
+	  task placement and frequency selection.
+
+	  Architectures which can provide the thermal pressure must define
+	  arch_scale_thermal_pressure(); otherwise the signal stays at zero.
+
+	  If unsure, say Y.
+
+config SCHED_CLASS_EXT
+	bool "Extensible scheduling class extension hook (stub)"
+	depends on SMP
+	default n
+	help
+	  sched_ext (an extensible BPF scheduler class) is not available on
+	  this 4.19 based kernel: the required infrastructure (BPF struct_ops,
+	  dispatch queues, and the sched_ext core) cannot be backported here.
+
+	  This option only enables an inert schedutil hook, which lets an
+	  out-of-tree implementation observe the utilization/frequency
+	  decisions taken by the scheduler. It does not provide a working
+	  sched_ext.
+
+	  If unsure, say N.
+
 config SCHED_TUNE
 	bool "Boosting for CFS tasks (EXPERIMENTAL)"
 	depends on SMP

@@ -103,12 +103,15 @@ int em_register_perf_domain(cpumask_t *span, unsigned int nr_states,
  * @pd		: performance domain for which energy has to be estimated
  * @max_util	: highest utilization among CPUs of the domain
  * @sum_util	: sum of the utilization of all CPUs in the domain
+ * @allowed_cpu_cap	: maximum allowed CPU capacity for the @pd, which
+ *			  might reflect reduced capacity due to thermal pressure
  *
  * Return: the sum of the energy consumed by the CPUs of the domain assuming
  * a capacity state satisfying the max utilization of the domain.
  */
 static inline unsigned long em_pd_energy(struct em_perf_domain *pd,
-				unsigned long max_util, unsigned long sum_util)
+				unsigned long max_util, unsigned long sum_util,
+				unsigned long allowed_cpu_cap)
 {
 	unsigned long freq, scale_cpu;
 	struct em_cap_state *cs;
@@ -124,6 +127,20 @@ static inline unsigned long em_pd_energy(struct em_perf_domain *pd,
 	 */
 	cpu = cpumask_first(to_cpumask(pd->cpus));
 	scale_cpu = arch_scale_cpu_capacity(NULL, cpu);
+
+	/*
+	 * If the performance domain is not allowed to use its full capacity,
+	 * because of thermal capping for example, map the utilization onto the
+	 * reduced capacity so that the selected capacity state delivers the
+	 * requested performance.
+	 */
+	if (allowed_cpu_cap && allowed_cpu_cap < scale_cpu) {
+#ifdef CONFIG_NONLINEAR_FREQ_CTL
+		max_util = div_u64((u64)max_util * scale_cpu, allowed_cpu_cap);
+#endif
+		scale_cpu = allowed_cpu_cap;
+	}
+
 	cs = &pd->table[pd->nr_cap_states - 1];
 #ifdef CONFIG_NONLINEAR_FREQ_CTL
 	freq = mtk_map_util_freq(cpu, max_util);
@@ -218,7 +235,8 @@ static inline struct em_perf_domain *em_cpu_get(int cpu)
 	return NULL;
 }
 static inline unsigned long em_pd_energy(struct em_perf_domain *pd,
-			unsigned long max_util, unsigned long sum_util)
+			unsigned long max_util, unsigned long sum_util,
+			unsigned long allowed_cpu_cap)
 {
 	return 0;
 }

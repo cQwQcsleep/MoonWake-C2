@@ -139,6 +139,24 @@ unsigned int sysctl_sched_cfs_bandwidth_slice		= 5000UL;
  */
 unsigned int capacity_margin				= 1280;
 
+/*
+ * Thermal pressure decays with the PELT half-life by default. The decay
+ * can be slowed down with sched_thermal_decay_shift so that the signal
+ * reflects the thermal constraint over a longer time window.
+ */
+int sched_thermal_decay_shift;
+static int __init setup_sched_thermal_decay_shift(char *str)
+{
+	int _shift = 0;
+
+	if (kstrtoint(str, 0, &_shift))
+		pr_warn("Unable to set scheduler thermal pressure decay shift parameter\n");
+
+	sched_thermal_decay_shift = clamp(_shift, 0, 10);
+	return 1;
+}
+__setup("sched_thermal_decay_shift=", setup_sched_thermal_decay_shift);
+
 static inline void update_load_add(struct load_weight *lw, unsigned long inc)
 {
 	lw->weight += inc;
@@ -7429,19 +7447,28 @@ static long
 compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 {
 	unsigned int max_util, cpu_util, cpu_cap;
-	unsigned long util_cfs, util_cfs_energy;
+	unsigned long util_cfs, util_cfs_energy, util_cfs_boost;
 	unsigned long sum_util, energy = 0;
 	struct task_struct *tsk;
 	int cpu;
 
 	for (; pd; pd = pd->next) {
 		struct cpumask *pd_mask = perf_domain_span(pd);
+		unsigned long allowed_cap;
 
 		/*
 		 * The energy model mandates all the CPUs of a performance
 		 * domain have the same capacity.
 		 */
-		cpu_cap = arch_scale_cpu_capacity(NULL, cpumask_first(pd_mask));
+		cpu = cpumask_first(pd_mask);
+		cpu_cap = arch_scale_cpu_capacity(NULL, cpu);
+
+		/*
+		 * Take the thermal pressure into account: the performance
+		 * domain can only use the capacity which is not capped by
+		 * thermal constraints.
+		 */
+		allowed_cap = cpu_cap - thermal_load_avg(cpu_rq(cpu));
 		max_util = sum_util = 0;
 
 		/*
@@ -7472,9 +7499,15 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			 * of the performance domain frequency.
 			 * NOTE: in case RT tasks are running, by default the
 			 * FREQUENCY_UTIL's utilization can be max OPP.
+			 *
+			 * Align the max utilization detection with schedutil
+			 * which boosts the CFS utilization with the runnable
+			 * average in order to detect CPU contention early.
 			 */
 			tsk = cpu == dst_cpu ? p : NULL;
-			cpu_util = effective_cpu_util(cpu, util_cfs, cpu_cap,
+			util_cfs_boost = max(util_cfs,
+					     READ_ONCE(cpu_rq(cpu)->cfs.avg.runnable_avg));
+			cpu_util = effective_cpu_util(cpu, util_cfs_boost, cpu_cap,
 						      FREQUENCY_UTIL, tsk);
 			max_util = max(max_util, cpu_util);
 
@@ -7484,7 +7517,7 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 #endif
 		}
 
-		energy += em_pd_energy(pd->em_pd, max_util, sum_util);
+		energy += em_pd_energy(pd->em_pd, max_util, sum_util, allowed_cap);
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 		trace_sched_compute_energy(dst_cpu, perf_domain_span(pd), energy, max_util,
@@ -8882,6 +8915,9 @@ static inline bool cfs_rq_has_blocked(struct cfs_rq *cfs_rq)
 	if (cfs_rq->avg.util_avg)
 		return true;
 
+	if (cfs_rq->avg.runnable_sum)
+		return true;
+
 	return false;
 }
 
@@ -8891,6 +8927,9 @@ static inline bool others_have_blocked(struct rq *rq)
 		return true;
 
 	if (READ_ONCE(rq->avg_dl.util_avg))
+		return true;
+
+	if (thermal_load_avg(rq))
 		return true;
 
 #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
@@ -8915,6 +8954,9 @@ static inline bool cfs_rq_is_decayed(struct cfs_rq *cfs_rq)
 		return false;
 
 	if (cfs_rq->avg.runnable_load_sum)
+		return false;
+
+	if (cfs_rq->avg.runnable_sum)
 		return false;
 
 	return true;
@@ -8961,6 +9003,8 @@ static void update_blocked_averages(int cpu)
 	curr_class = rq->curr->sched_class;
 	update_rt_rq_load_avg(rq_clock_pelt(rq), rq, curr_class == &rt_sched_class);
 	update_dl_rq_load_avg(rq_clock_pelt(rq), rq, curr_class == &dl_sched_class);
+	update_thermal_load_avg(rq_clock_thermal(rq), rq,
+				arch_scale_thermal_pressure(cpu_of(rq)));
 	update_irq_load_avg(rq, 0);
 	/* Don't need periodic decay once load/util_avg are null */
 	if (others_have_blocked(rq))
@@ -9038,6 +9082,8 @@ static inline void update_blocked_averages(int cpu)
 	curr_class = rq->curr->sched_class;
 	update_rt_rq_load_avg(rq_clock_pelt(rq), rq, curr_class == &rt_sched_class);
 	update_dl_rq_load_avg(rq_clock_pelt(rq), rq, curr_class == &dl_sched_class);
+	update_thermal_load_avg(rq_clock_thermal(rq), rq,
+				arch_scale_thermal_pressure(cpu_of(rq)));
 	update_irq_load_avg(rq, 0);
 #ifdef CONFIG_NO_HZ_COMMON
 	rq->last_blocked_load_update_tick = jiffies;
@@ -9162,6 +9208,7 @@ static unsigned long scale_rt_capacity(int cpu, unsigned long max)
 	}
 #endif
 	used += READ_ONCE(rq->avg_dl.util_avg);
+	used += thermal_load_avg(rq);
 
 	if (unlikely(used >= max))
 		return 1;

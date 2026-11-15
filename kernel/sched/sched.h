@@ -969,6 +969,9 @@ struct rq {
 
 	struct sched_avg	avg_rt;
 	struct sched_avg	avg_dl;
+#ifdef CONFIG_SCHED_THERMAL_PRESSURE
+	struct sched_avg	avg_thermal;
+#endif
 #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
 	struct sched_avg	avg_irq;
 #endif
@@ -1135,6 +1138,18 @@ static inline u64 rq_clock_task(struct rq *rq)
 	assert_clock_updated(rq);
 
 	return rq->clock_task;
+}
+
+/*
+ * The clock used by thermal pressure tracking can be slowed down by
+ * sched_thermal_decay_shift so that the thermal pressure signal decays
+ * over a longer window than the default PELT period.
+ */
+extern int sched_thermal_decay_shift;
+
+static inline u64 rq_clock_thermal(struct rq *rq)
+{
+	return rq_clock_task(rq) >> sched_thermal_decay_shift;
 }
 
 static inline void rq_clock_skip_update(struct rq *rq)
@@ -2567,6 +2582,19 @@ static inline unsigned long cpu_util_cfs(struct rq *rq)
 
 	return util;
 }
+
+/*
+ * Return the (estimated) CPU utilization boosted to at least the CFS
+ * runnable average. CPU contention for CFS tasks can be detected by
+ * runnable > utilization, which gives schedutil an early ramp-up signal.
+ */
+static inline unsigned long cpu_util_cfs_boost(struct rq *rq)
+{
+	unsigned long util = cpu_util_cfs(rq);
+	unsigned long runnable = READ_ONCE(rq->cfs.avg.runnable_avg);
+
+	return max(util, runnable);
+}
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
@@ -2574,6 +2602,10 @@ static inline unsigned long cpu_util_cfs(struct rq *rq)
 unsigned long effective_cpu_util(int cpu, unsigned long util_cfs,
 				 unsigned long max, enum schedutil_type type,
 				 struct task_struct *p);
+
+#ifdef CONFIG_SCHED_CLASS_EXT
+void sched_ext_util_update(int cpu, unsigned long util);
+#endif
 
 static inline unsigned long cpu_bw_dl(struct rq *rq)
 {

@@ -861,6 +861,36 @@ TRACE_EVENT(sched_load_rt_rq,
 		  __entry->util)
 );
 
+#ifdef CONFIG_SCHED_THERMAL_PRESSURE
+/*
+ * Tracepoint for thermal pressure tracking:
+ */
+TRACE_EVENT(pelt_thermal_tp,
+
+	TP_PROTO(struct rq *rq),
+
+	TP_ARGS(rq),
+
+	TP_STRUCT__entry(
+		__array(	char,	comm,	TASK_COMM_LEN	)
+		__field(	pid_t,	pid			)
+		__field(	int,	cpu			)
+		__field(	unsigned long,	load_avg	)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm, rq->curr->comm, TASK_COMM_LEN);
+		__entry->pid		= rq->curr->pid;
+		__entry->cpu		= rq->cpu;
+		__entry->load_avg	= rq->avg_thermal.load_avg;
+	),
+
+	TP_printk("comm=%s pid=%d cpu=%d thermal_load_avg=%lu",
+		  __entry->comm, __entry->pid, __entry->cpu,
+		  __entry->load_avg)
+);
+#endif /* CONFIG_SCHED_THERMAL_PRESSURE */
+
 /*
  * Tracepoint for sched_entity load tracking:
  */

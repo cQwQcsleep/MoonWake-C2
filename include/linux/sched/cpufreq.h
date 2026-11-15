@@ -28,7 +28,16 @@ bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
 static inline unsigned long map_util_freq(unsigned long util,
 					unsigned long freq, unsigned long cap)
 {
-	return div_u64((u64)(freq + (freq >> 2)) * util, cap);
+	return div_u64((u64)freq * util, cap);
+}
+
+/*
+ * Add a 25% margin to the utilization before mapping it into a frequency:
+ * this places the frequency tipping point at 80% utilization.
+ */
+static inline unsigned long map_util_perf(unsigned long util)
+{
+	return util + (util >> 2);
 }
 
 #ifdef CONFIG_NONLINEAR_FREQ_CTL
@@ -41,6 +50,8 @@ __attribute__((unused)) static unsigned long mtk_map_util_freq(int cpu, unsigned
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 	util = util * capacity_margin / SCHED_CAPACITY_SCALE;
+#else
+	util = map_util_perf(util);
 #endif
 
 	tbl = upower_get_core_tbl(cpu);
