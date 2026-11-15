@@ -1228,14 +1228,6 @@ static int _mt_cpufreq_init(struct cpufreq_policy *policy)
 
 		p->cpu_level = lv;
 
-		/* The platform default lowest-OPP index is 15 (16 steps).
-		 * Move it to the last OPP when the FY full-OC table has more
-		 * steps, and keep it in range for any table size.
-		 */
-		if ((p->idx_opp_ppm_base == 15 && p->nr_opp_tbl > 16) ||
-		    p->idx_opp_ppm_base >= p->nr_opp_tbl)
-			p->idx_opp_ppm_base = p->nr_opp_tbl - 1;
-
 		ret = _mt_cpufreq_setup_freqs_table(policy,
 		opp_tbl_info->opp_tbl, opp_tbl_info->size);
 

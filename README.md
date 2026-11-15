@@ -10,7 +10,7 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | 内核 | Linux 4.19.325，non-GKI |
 | Root | KernelSU-Next + SuSFS v2.3.0 |
 | KernelSU 版本 | `33226`（`legacy-susfs-v2-susmount@75143d5`） |
-| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2G` |
+| 版本名 | `4.19.325-MoonWake-2.7.0-C2` 至 `-C2H` |
 | Release 标识 | `mwk-2.7.0-<run_number>`（每次构建一个 Release） |
 | 构建配置 | `configs/release/compression-c2*.json` |
 
@@ -28,9 +28,10 @@ Xiaomi ruby（MT6877）的 Linux 4.19.325 内核，包含 KernelSU-Next + SuSFS�
 | C2D | 1100MHz | 2800MHz | `gpu_oc` + `cpu_oc_2800` |
 | C2E | 原厂 950MHz | 2800/3000MHz | `cpu_oc_2800` + `cpu_oc_3000` |
 | C2F | 1100MHz | 2800/3000MHz | `gpu_oc` + `cpu_oc_2800` + `cpu_oc_3000` |
-| C2G | 1100MHz | 2800/3000MHz | 完整插档：GPU 40 档、CPU A78 18 档（3.0/2.8GHz 置顶，保留原 2600/2400 等档位） |
+| C2G | 1100MHz | 2800/3000MHz | 完整插档：GPU 40 档、CPU A78 18 档（MCUPM 只有 16 槽，18 档索引会被截断，实际不可用） |
+| C2H | 1100MHz | 2800/3000MHz | 修正版：GPU 40 档、CPU 16 档（3.0/2.8GHz 与 2.2/2.1GHz 替换两个原厂中频，同步修正 MCUPM/PVT 表） |
 
-C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建。
+C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2G 使用同一套报告调频参数单独构建；C2H 修正 C2G 的 CPU 档位与 MCUPM 索引不匹配问题。
 
 ## 包含的内容
 
@@ -82,7 +83,9 @@ GitHub Actions → `Build MoonWake Kernel` → Run workflow：
 
 - GPU OC 在 `C2B/C2D/C2F` 中把 OPP 顶部两档替换为 1.1GHz/1.05GHz，使用 `POSDIV_POWER_2`，只改三套 GPU segment 表的顶部两档，不改变表长度、PTPOD 索引或 aging table。
 - CPU 2.8GHz 变体把 A78 顶档 2600MHz 替换为 2800MHz；3.0GHz 变体把顶部两档替换为 3000/2800MHz，保持频率表降序，避免报告原方案中 2600→2800→3000 的升序问题。
-- C2G 使用完整插档：GPU 由 38 档扩展为 40 档（插入 1.1GHz/1.05GHz，并同步 PTPOD 与 aging table）；CPU A78 由 16 档扩展为 18 档（插入 3.0GHz/2.8GHz，保留原 2.6GHz/2.4GHz 等档位）。电压使用报告值（GPU 1.1GHz@881.25mV、CPU 2.8GHz@1025mV、3.0GHz@1125mV）。
+- C2G 使用完整插档：GPU 由 38 档扩展为 40 档（插入 1.1GHz/1.05GHz，并同步 PTPOD 与 aging table）；CPU 曾尝试扩为 18 档，但 MCUPM/PVT 只有 16 个 OPP 槽位，索引 16/17 会被截断成 1，导致待机锁在第二高频，因此 C2H 起改回 16 档。
+- C2H 的 CPU 16 档：A78 为 3.0/2.8/2.6/2.4/2.0/1.9/1.8/1.66/1.54/1.43/1.3/1.14/1.04/0.91/0.74/0.65GHz，A55 为 2.2/2.1/2.0/1.903/1.8/1.6/1.407/1.31/1.26/1.15/1.053/0.98/0.9/0.74/0.65/0.5GHz；同时把 `FY_6833Tbl` 的 MCUPM 表改成同一组频率和电压，超频才会真正生效。
+- 电压使用最终降压表（GPU 1.1GHz@818.75mV、CPU 2.8GHz@1031.25mV、3.0GHz@1087.5mV、A55 2.2GHz@1025mV）。
 - CPU 3.0GHz 电压余量很小，建议先把 Big Cores 的 `eem_offset` 归零验证，再考虑长期使用；所有 OC 变体都应保留原 boot 镜像以便回滚。
 
 ## 刷入后检查

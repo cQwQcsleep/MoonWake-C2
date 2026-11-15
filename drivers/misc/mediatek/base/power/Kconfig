@@ -23,13 +23,14 @@ config MTK_CPU_OC_3000
 	  2.8GHz. Voltage headroom is very small; experimental only.
 
 config MTK_CPU_OC_FULL
-	bool "MT6877 full 18-step CPU OC table"
+	bool "MT6877 16-slot CPU OC table (3.0/2.8GHz + 2.2/2.1GHz)"
 	depends on MTK_CPU_FREQ && MACH_MT6877
 	default n
 	help
-	  Insert 3.0GHz/2.8GHz on top of the original 16 FY-segment
-	  Cortex-A78 OPP steps and 2.2GHz/2.1GHz on top of the original
-	  16 Cortex-A55 steps, preserving all original frequencies.
+	  Replace two mid OPP steps with 3.0GHz/2.8GHz for the Cortex-A78
+	  cluster and 2.2GHz/2.1GHz for the Cortex-A55 cluster. The total
+	  step count stays at 16 because the MCUPM/PVT interface has only
+	  16 OPP slots; indices above 15 are truncated.
 	  Experimental only.
 
 config MTK_PTPOD
