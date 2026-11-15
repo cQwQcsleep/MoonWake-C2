@@ -500,6 +500,9 @@ static inline unsigned long cpufreq_scale(unsigned long old, u_int div,
  */
 #define LATENCY_MULTIPLIER		(1000)
 
+/* Governor flags */
+#define CPUFREQ_NEED_UPDATE_LIMITS	(1 << 0)
+
 struct cpufreq_governor {
 	char	name[CPUFREQ_NAME_LEN];
 	int	(*init)(struct cpufreq_policy *policy);
@@ -513,6 +516,7 @@ struct cpufreq_governor {
 					 unsigned int freq);
 	/* For governors which change frequency dynamically by themselves */
 	bool			dynamic_switching;
+	unsigned int		flags;
 	struct list_head	governor_list;
 	struct module		*owner;
 };

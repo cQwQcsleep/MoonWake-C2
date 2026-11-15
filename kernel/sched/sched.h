@@ -2482,10 +2482,11 @@ static inline bool uclamp_rq_is_capped(struct rq *rq)
 	if (!static_branch_likely(&sched_uclamp_used))
 		return false;
 
-	cpu_util = READ_ONCE(rq->cfs.avg.util_avg);
+	cpu_util = READ_ONCE(rq->cfs.avg.util_avg) +
+		   READ_ONCE(rq->avg_rt.util_avg);
 	max_util = READ_ONCE(rq->uclamp[UCLAMP_MAX].value);
 
-	return max_util != SCHED_CAPACITY_SCALE && cpu_util > max_util;
+	return max_util != SCHED_CAPACITY_SCALE && cpu_util >= max_util;
 }
 #else /* CONFIG_UCLAMP_TASK */
 static inline

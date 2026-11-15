@@ -41,12 +41,15 @@ C2A–C2F 作为多版本批次并行构建，合并发布到一个 Release；C2
 
 C2K 的 schedutil 变更（相对 C2H）：
 
-- `uclamp_rq_is_capped()`：`uclamp_max` 封顶后不再被 `sugov_cpu_is_busy()` 的保持逻辑或 iowait boost 突破
+- `uclamp_rq_is_capped()`：`uclamp_max` 封顶后不再被 `sugov_hold_freq()` 的保持逻辑或 iowait boost 突破
 - iowait boost 改为在 `effective_cpu_util()` 结果上叠加并受 `max` 夹紧，不再用 `max(boost, util)` 覆盖
+- `sugov_cpu_is_busy()` 重构为 `sugov_hold_freq()`，`need_freq_update` 时强制下发
 - `get_next_freq()` 的线性路径改用固定参考频率 `policy->cpuinfo.max_freq`；C2K 仍启用 MTK `CONFIG_NONLINEAR_FREQ_CTL`，该平台走 `mtk_map_util_freq()` 的 OPP 表映射，此项仅在关闭非线性调频时生效
-- `schedutil_cpu_util()` 重命名为 `effective_cpu_util()`，EAS 能耗计算与 governor 共用同一套 util 口径
+- `schedutil_cpu_util()` 移到 `kernel/sched/core.c` 并重命名为 `effective_cpu_util()`，EAS 能耗计算与 governor 共用同一套 util 口径
 - `map_util_freq()` 改为 64 位乘法，消除 3.0GHz 档位的 32 位溢出风险
-- S3 的 runnable boosting / thermal pressure 与 S5 的 `adjust_perf` / sched_ext 未纳入（依赖 5.7+/6.x 调度器核心，本树无对应框架）
+- cpufreq 核心新增 governor `flags` 与 `CPUFREQ_NEED_UPDATE_LIMITS`，limits 变化时保证驱动被调用
+- `sched_runtime`/`sched_deadline`/`sched_period` 改用 `NSEC_PER_MSEC`（仅可读性）
+- 未纳入：runnable boosting、reduced capacity、thermal pressure、`adjust_perf`、sched_ext。前四项依赖 5.7+/6.x 的 PELT/EM/驱动框架或本平台未实现 `adjust_perf` 回调，sched_ext 在 4.19 无对应框架；强行回迁会改动调度器核心，风险远大于收益
 
 ## 包含的内容
 
