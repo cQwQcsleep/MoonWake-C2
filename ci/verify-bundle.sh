@@ -1,8 +1,8 @@
 #!/bin/bash
 # Collect kernel verification data into verify/.
 #
-# Data collection only: it is deliberately NOT set -e, because a partially built
-# tree should still upload whatever evidence exists. Hard assertions live in the
+# Data collection only: deliberately NOT set -e, because a partially built tree
+# should still upload whatever evidence exists. Hard assertions live in the
 # dedicated "Assert KernelSU integrated" workflow step.
 #
 # Inputs (env): OUT_DIR, KERNEL_NAME, KSU_VERSION_OVERRIDE, GITHUB_WORKSPACE
@@ -10,6 +10,7 @@ set -uo pipefail
 
 out_dir="${OUT_DIR:-out}"
 name="${KERNEL_NAME:?KERNEL_NAME is required}"
+release_name="$(echo "$name" | tr '-' '_')"
 mkdir -p verify
 
 echo "===== CONFIG_KSU* ====="
@@ -28,8 +29,8 @@ do
     fi
 done
 [ -f verify/ksu-next-commit.txt ] || echo "UPSTREAM not found" > verify/ksu-next-commit.txt
+echo "KSU_VERSION_OVERRIDE=${KSU_VERSION_OVERRIDE:-unset}" >> verify/ksu-next-commit.txt
 cat verify/ksu-next-commit.txt
-echo "KSU_VERSION_OVERRIDE=${KSU_VERSION_OVERRIDE:-unset}" | tee -a verify/ksu-next-commit.txt
 
 echo "===== susfs symbols ====="
 grep -E 'susfs_|ksu_handle_sys_reboot' "$out_dir/System.map" 2>/dev/null \
@@ -48,4 +49,11 @@ fi
 
 cp -f "$out_dir/System.map" verify/System.map 2>/dev/null || true
 cp -f "$out_dir/.config" verify/config.txt 2>/dev/null || true
+
+# Variant-named copies: ci/pack-release.sh picks these up as release metadata.
+cp -f "$out_dir/System.map" "verify/${release_name}_System.map" 2>/dev/null || true
+cp -f "$out_dir/.config" "verify/${release_name}_config.txt" 2>/dev/null || true
+cp -f verify/ksu-next-commit.txt "verify/${release_name}_ksu.txt" 2>/dev/null || true
+
+ls -l verify
 echo "verify artifacts ready"
