@@ -160,7 +160,7 @@ jobs:
           [ -n "${KSU_SETUP_SCRIPT:-}" ] || { echo 'KernelSU setup script unresolved' >&2; exit 1; }
           sh "$KSU_SETUP_SCRIPT" "$kernelSUsetupArg"
           test -L drivers/kernelsu || { echo 'drivers/kernelsu symlink missing' >&2; exit 1; }
-          cat kernelsu/KernelSU-Next/UPSTREAM
+          cat "$GITHUB_WORKSPACE/kernelsu/KernelSU-Next/UPSTREAM"
           sed -i 's/ -dirty//g' scripts/setlocalversion
 
       - name: Run additional script
@@ -328,7 +328,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag != '' && github.event.inputs.release_tag || format('mwk-2.7.0-{0}', github.run_number) }}
-          name: MoonWake 2.7.0 #${{ github.run_number }}
+          name: "MoonWake 2.7.0 #${{ github.run_number }}"
           files: release_assets/*
           fail_on_unmatched_files: true
           draft: false
