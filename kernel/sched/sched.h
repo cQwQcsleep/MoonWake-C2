@@ -2474,6 +2474,19 @@ static inline bool uclamp_is_used(void)
 {
 	return static_branch_likely(&sched_uclamp_used);
 }
+
+static inline bool uclamp_rq_is_capped(struct rq *rq)
+{
+	unsigned long cpu_util, max_util;
+
+	if (!static_branch_likely(&sched_uclamp_used))
+		return false;
+
+	cpu_util = READ_ONCE(rq->cfs.avg.util_avg);
+	max_util = READ_ONCE(rq->uclamp[UCLAMP_MAX].value);
+
+	return max_util != SCHED_CAPACITY_SCALE && cpu_util > max_util;
+}
 #else /* CONFIG_UCLAMP_TASK */
 static inline
 unsigned long uclamp_rq_util_with(struct rq *rq, unsigned long util,
@@ -2483,6 +2496,11 @@ unsigned long uclamp_rq_util_with(struct rq *rq, unsigned long util,
 }
 
 static inline bool uclamp_is_used(void)
+{
+	return false;
+}
+
+static inline bool uclamp_rq_is_capped(struct rq *rq)
 {
 	return false;
 }
@@ -2552,7 +2570,7 @@ static inline unsigned long cpu_util_cfs(struct rq *rq)
 
 #ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
 
-unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
+unsigned long effective_cpu_util(int cpu, unsigned long util_cfs,
 				 unsigned long max, enum schedutil_type type,
 				 struct task_struct *p);
 
@@ -2572,7 +2590,7 @@ static inline unsigned long cpu_util_rt(struct rq *rq)
 }
 
 #else /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
-static inline unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
+static inline unsigned long effective_cpu_util(int cpu, unsigned long util_cfs,
 				 unsigned long max, enum schedutil_type type,
 				 struct task_struct *p)
 {

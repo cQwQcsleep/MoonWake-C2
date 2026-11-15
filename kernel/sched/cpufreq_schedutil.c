@@ -232,8 +232,12 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				  unsigned long util, unsigned long max)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
-	unsigned int freq = arch_scale_freq_invariant() ?
-				policy->cpuinfo.max_freq : policy->cur;
+	/*
+	 * Use a fixed reference frequency. policy->cur changes with the
+	 * selected OPP and makes the util -> freq mapping drift on
+	 * non-invariant platforms.
+	 */
+	unsigned int freq = policy->cpuinfo.max_freq;
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 	freq = map_util_freq_with_margin(util, freq, max);
@@ -286,7 +290,7 @@ schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p);
  * based on the task model parameters and gives the minimal utilization
  * required to meet deadlines.
  */
-unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
+unsigned long effective_cpu_util(int cpu, unsigned long util_cfs,
 				 unsigned long max, enum schedutil_type type,
 				 struct task_struct *p)
 {
@@ -385,7 +389,7 @@ static unsigned long sugov_get_util(struct sugov_cpu *sg_cpu)
 	sg_cpu->max = max;
 	sg_cpu->bw_dl = cpu_bw_dl(rq);
 
-	return schedutil_cpu_util(sg_cpu->cpu, util_cfs, max,
+	return effective_cpu_util(sg_cpu->cpu, util_cfs, max,
 				  FREQUENCY_UTIL, NULL);
 }
 
@@ -479,17 +483,17 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
  * being more conservative on tasks which does sporadic IO operations.
  */
 static unsigned long sugov_iowait_apply(struct sugov_cpu *sg_cpu, u64 time,
-					unsigned long util, unsigned long max)
+					unsigned long max)
 {
 	unsigned long boost;
 
 	/* No boost currently required */
 	if (!sg_cpu->iowait_boost)
-		return util;
+		return 0;
 
 	/* Reset boost if the CPU appears to have been idle enough */
 	if (sugov_iowait_reset(sg_cpu, time, false))
-		return util;
+		return 0;
 
 	if (!sg_cpu->iowait_boost_pending) {
 		/*
@@ -498,25 +502,39 @@ static unsigned long sugov_iowait_apply(struct sugov_cpu *sg_cpu, u64 time,
 		sg_cpu->iowait_boost >>= 1;
 		if (sg_cpu->iowait_boost < sg_cpu->min) {
 			sg_cpu->iowait_boost = 0;
-			return util;
+			return 0;
 		}
 	}
 
 	sg_cpu->iowait_boost_pending = false;
 
 	/*
+	 * A request capped by uclamp_max must not escape the cap through
+	 * the IO boost.
+	 */
+	if (uclamp_rq_is_capped(cpu_rq(sg_cpu->cpu)))
+		return 0;
+
+	/*
 	 * @util is already in capacity scale; convert iowait_boost
 	 * into the same scale so we can compare.
 	 */
 	boost = (sg_cpu->iowait_boost * max) >> SCHED_CAPACITY_SHIFT;
-	return max(boost, util);
+	return boost;
 }
 
 #ifdef CONFIG_NO_HZ_COMMON
 static bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu)
 {
-	unsigned long idle_calls = tick_nohz_get_idle_calls_cpu(sg_cpu->cpu);
-	bool ret = idle_calls == sg_cpu->saved_idle_calls;
+	unsigned long idle_calls;
+	bool ret;
+
+	/* A CPU capped by uclamp_max must not be kept busy at high frequency */
+	if (uclamp_rq_is_capped(cpu_rq(sg_cpu->cpu)))
+		return false;
+
+	idle_calls = tick_nohz_get_idle_calls_cpu(sg_cpu->cpu);
+	ret = idle_calls == sg_cpu->saved_idle_calls;
 
 	sg_cpu->saved_idle_calls = idle_calls;
 	return ret;
@@ -571,7 +589,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 
 	util = sugov_get_util(sg_cpu);
 	max = sg_cpu->max;
-	util = sugov_iowait_apply(sg_cpu, time, util, max);
+	util = min(util + sugov_iowait_apply(sg_cpu, time, max), max);
 #ifdef CONFIG_UCLAMP_TASK
 	trace_schedutil_uclamp_util(policy->cpu, util);
 #endif
@@ -631,7 +649,8 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
 
 		j_util = sugov_get_util(j_sg_cpu);
 		j_max = j_sg_cpu->max;
-		j_util = sugov_iowait_apply(j_sg_cpu, time, j_util, j_max);
+		j_util = min(j_util + sugov_iowait_apply(j_sg_cpu, time, j_max),
+			     j_max);
 
 #ifdef CONFIG_UCLAMP_TASK
 		trace_schedutil_uclamp_util(j, j_util);

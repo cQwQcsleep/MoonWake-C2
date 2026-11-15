@@ -3,6 +3,7 @@
 #define _LINUX_SCHED_CPUFREQ_H
 
 #include <linux/types.h>
+#include <linux/math64.h>
 #include "../../../drivers/misc/mediatek/base/power/include/mtk_upower.h"
 /*
  * Interface between cpufreq drivers and the scheduler:
@@ -27,7 +28,7 @@ bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
 static inline unsigned long map_util_freq(unsigned long util,
 					unsigned long freq, unsigned long cap)
 {
-	return (freq + (freq >> 2)) * util / cap;
+	return div_u64((u64)(freq + (freq >> 2)) * util, cap);
 }
 
 #ifdef CONFIG_NONLINEAR_FREQ_CTL
