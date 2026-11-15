@@ -42,8 +42,8 @@ perform_cleanup() {
 }
 
 # Locate an in-repository vendored KernelSU-Next checkout, if there is one.
-# Works both in CI (kernel cloned into $GITHUB_WORKSPACE/<name>) and for a local
-# build run from the monorepo root.
+# Covers CI (kernel cloned into $GITHUB_WORKSPACE/<name>) as well as a local build
+# started from the monorepo root.
 find_vendored() {
     for candidate in \
         "${GITHUB_WORKSPACE:-/nonexistent}/kernelsu/KernelSU-Next" \
@@ -58,29 +58,25 @@ find_vendored() {
     return 1
 }
 
-upstream_field() {
-    sed -n "s/^$1=//p" "$1_UPSTREAM_FILE" 2>/dev/null || true
-}
-
 # Sets up or update KernelSU-Next environment
 setup_kernelsu() {
     echo "[+] Setting up $REPO..."
 
     if KSU_SRC=$(find_vendored); then
         echo "[+] Using vendored KernelSU-Next: $KSU_SRC"
-        _UPSTREAM_FILE="$KSU_SRC/UPSTREAM"
-        if [ -f "$_UPSTREAM_FILE" ]; then
-            VENDOR_BRANCH=$(sed -n 's/^branch=//p' "$_UPSTREAM_FILE" | head -n1)
-            VENDOR_COMMIT=$(sed -n 's/^commit=//p' "$_UPSTREAM_FILE" | head -n1)
+        UPSTREAM_FILE="$KSU_SRC/UPSTREAM"
+        if [ -f "$UPSTREAM_FILE" ]; then
+            VENDOR_BRANCH=$(sed -n 's/^branch=//p' "$UPSTREAM_FILE" | head -n1)
+            VENDOR_COMMIT=$(sed -n 's/^commit=//p' "$UPSTREAM_FILE" | head -n1)
             echo "[+] UPSTREAM branch=$VENDOR_BRANCH commit=$VENDOR_COMMIT"
             if [ -n "${1-}" ] && [ -n "$VENDOR_BRANCH" ] && [ "$1" != "$VENDOR_BRANCH" ]; then
-                echo "[ERROR] setupArg '$1' does not match vendored UPSTREAM branch '$VENDOR_BRANCH'." >&2
-                echo "[ERROR] A vendored tree cannot be re-pointed at another ref; update the vendored" >&2
-                echo "[ERROR] checkout and UPSTREAM together, or fix the config's setupArg." >&2
+                echo "[ERROR] setupArg '$1' does not match the vendored UPSTREAM branch '$VENDOR_BRANCH'." >&2
+                echo "[ERROR] A vendored tree cannot be re-pointed at another ref. Update the vendored" >&2
+                echo "[ERROR] checkout and UPSTREAM together, or fix setupArg in the config JSON." >&2
                 exit 1
             fi
         else
-            echo "[!] $KSU_SRC/UPSTREAM is missing; provenance of the vendored tree is unknown."
+            echo "[!] $UPSTREAM_FILE is missing; provenance of the vendored tree is unknown."
         fi
         if [ ! -f "$KSU_SRC/kernel/Kconfig" ]; then
             echo "[ERROR] $KSU_SRC/kernel/Kconfig not found; not a KernelSU-Next kernel tree." >&2
