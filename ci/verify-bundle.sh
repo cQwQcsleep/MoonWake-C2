@@ -16,12 +16,19 @@ echo "===== CONFIG_KSU* ====="
 grep -E '^CONFIG_KSU' "$out_dir/.config" 2>/dev/null | sort | tee verify/ksu-config.txt
 
 echo "===== KernelSU-Next metadata ====="
-src="$name/kernelsu/KernelSU-Next/UPSTREAM"
-if [ -f "$src" ]; then
-    cat "$src" | tee verify/ksu-next-commit.txt
-else
-    echo "missing: $src" | tee verify/ksu-next-commit.txt
-fi
+# drivers/kernelsu is a symlink to <vendored>/KernelSU-Next/kernel, so UPSTREAM has
+# to be read from the vendored checkout itself, not through the kernel tree.
+for upstream in \
+    "${GITHUB_WORKSPACE:-.}/kernelsu/KernelSU-Next/UPSTREAM" \
+    "$name/kernelsu/../UPSTREAM"
+do
+    if [ -f "$upstream" ]; then
+        cp -f "$upstream" verify/ksu-next-commit.txt
+        break
+    fi
+done
+[ -f verify/ksu-next-commit.txt ] || echo "UPSTREAM not found" > verify/ksu-next-commit.txt
+cat verify/ksu-next-commit.txt
 echo "KSU_VERSION_OVERRIDE=${KSU_VERSION_OVERRIDE:-unset}" | tee -a verify/ksu-next-commit.txt
 
 echo "===== susfs symbols ====="
