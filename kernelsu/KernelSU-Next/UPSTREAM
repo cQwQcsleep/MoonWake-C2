@@ -4,3 +4,5 @@ commit=75143d56970811a9bb7a008dec40832155000c17
 tag=v3.4.0-legacy-susfs-v2
 commit_count=3026
 ksu_version=33226
+tree_sha256=
+tree_digest_scope=kernelsu/KernelSU-Next/kernel
