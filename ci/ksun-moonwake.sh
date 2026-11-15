@@ -30,45 +30,99 @@ initialize_variables() {
 # Reverts modifications made by this script
 perform_cleanup() {
     echo "[+] Cleaning up..."
-    [ -L "$DRIVER_DIR/kernelsu" ] && rm "$DRIVER_DIR/kernelsu" && echo "[-] Symlink removed."
-    grep -q "kernelsu" "$DRIVER_MAKEFILE" && sed -i '/kernelsu/d' "$DRIVER_MAKEFILE" && echo "[-] Makefile reverted."
-    grep -q "drivers/kernelsu/Kconfig" "$DRIVER_KCONFIG" && sed -i '/drivers\/kernelsu\/Kconfig/d' "$DRIVER_KCONFIG" && echo "[-] Kconfig reverted."
-    if [ -d "$GKI_ROOT/$REPO" ]; then
-        rm -rf "$GKI_ROOT/$REPO" && echo "[-] $REPO directory deleted."
+    if [ -L "$DRIVER_DIR/kernelsu" ]; then
+        rm "$DRIVER_DIR/kernelsu" && echo "[-] Symlink removed."
     fi
+    if grep -q "kernelsu" "$DRIVER_MAKEFILE"; then
+        sed -i '/kernelsu/d' "$DRIVER_MAKEFILE" && echo "[-] Makefile reverted."
+    fi
+    if grep -q "drivers/kernelsu/Kconfig" "$DRIVER_KCONFIG"; then
+        sed -i '/drivers\/kernelsu\/Kconfig/d' "$DRIVER_KCONFIG" && echo "[-] Kconfig reverted."
+    fi
+}
+
+# Locate an in-repository vendored KernelSU-Next checkout, if there is one.
+# Works both in CI (kernel cloned into $GITHUB_WORKSPACE/<name>) and for a local
+# build run from the monorepo root.
+find_vendored() {
+    for candidate in \
+        "${GITHUB_WORKSPACE:-/nonexistent}/kernelsu/KernelSU-Next" \
+        "$GKI_ROOT/kernelsu/KernelSU-Next" \
+        "$GKI_ROOT/../kernelsu/KernelSU-Next"
+    do
+        if [ -d "$candidate/kernel" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+upstream_field() {
+    sed -n "s/^$1=//p" "$1_UPSTREAM_FILE" 2>/dev/null || true
 }
 
 # Sets up or update KernelSU-Next environment
 setup_kernelsu() {
     echo "[+] Setting up $REPO..."
-    if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/kernelsu/KernelSU-Next/kernel" ]; then
-        KSU_SRC="$GITHUB_WORKSPACE/kernelsu/KernelSU-Next"
+
+    if KSU_SRC=$(find_vendored); then
         echo "[+] Using vendored KernelSU-Next: $KSU_SRC"
+        _UPSTREAM_FILE="$KSU_SRC/UPSTREAM"
+        if [ -f "$_UPSTREAM_FILE" ]; then
+            VENDOR_BRANCH=$(sed -n 's/^branch=//p' "$_UPSTREAM_FILE" | head -n1)
+            VENDOR_COMMIT=$(sed -n 's/^commit=//p' "$_UPSTREAM_FILE" | head -n1)
+            echo "[+] UPSTREAM branch=$VENDOR_BRANCH commit=$VENDOR_COMMIT"
+            if [ -n "${1-}" ] && [ -n "$VENDOR_BRANCH" ] && [ "$1" != "$VENDOR_BRANCH" ]; then
+                echo "[ERROR] setupArg '$1' does not match vendored UPSTREAM branch '$VENDOR_BRANCH'." >&2
+                echo "[ERROR] A vendored tree cannot be re-pointed at another ref; update the vendored" >&2
+                echo "[ERROR] checkout and UPSTREAM together, or fix the config's setupArg." >&2
+                exit 1
+            fi
+        else
+            echo "[!] $KSU_SRC/UPSTREAM is missing; provenance of the vendored tree is unknown."
+        fi
+        if [ ! -f "$KSU_SRC/kernel/Kconfig" ]; then
+            echo "[ERROR] $KSU_SRC/kernel/Kconfig not found; not a KernelSU-Next kernel tree." >&2
+            exit 1
+        fi
         ln -sfn "$KSU_SRC" "$GKI_ROOT/$REPO"
+        KSU_LINK_SRC="$KSU_SRC/kernel"
     else
         KSU_SRC="$GKI_ROOT/$REPO"
-        test -d "$KSU_SRC" || git clone "https://github.com/$OWNER/$REPO" "$KSU_SRC" && echo "[+] Repository cloned."
+        if [ ! -d "$KSU_SRC" ]; then
+            git clone "https://github.com/$OWNER/$REPO" "$KSU_SRC"
+        fi
         cd "$KSU_SRC"
-        git stash && echo "[-] Stashed current changes."
+        git stash >/dev/null 2>&1 || true
 
-        BRANCH="$(git rev-parse --abbrev-ref origin/HEAD | sed 's@^origin/@@')"
-        if [ "$(git status | grep -Po 'v\d+(\.\d+)*' | head -n1)" ]; then
-            git checkout $BRANCH && echo "[-] Switched to $BRANCH branch."
+        BRANCH="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null | sed 's@^origin/@@' || true)"
+        if [ -n "$BRANCH" ] && git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            git checkout "$BRANCH"
         fi
+        git pull || echo "[!] git pull failed; continuing with the existing checkout"
 
-        git pull && echo "[+] Repository updated."
         if [ -z "${1-}" ]; then
-            git checkout "$(git describe --abbrev=0 --tags)" && echo "[-] Checked out latest tag."
+            git checkout "$(git describe --abbrev=0 --tags)"
         else
-            git checkout "$1" && echo "[-] Checked out $1." || echo "[-] Checkout default branch"
+            git checkout "$1" || { echo "[ERROR] cannot check out '$1' in $REPO." >&2; exit 1; }
         fi
+        KSU_LINK_SRC="$KSU_SRC/kernel"
+        cd "$GKI_ROOT"
     fi
 
     cd "$DRIVER_DIR"
-    ln -sf "$(realpath --relative-to="$DRIVER_DIR" "$KSU_SRC/kernel")" "kernelsu" && echo "[+] Symlink created."
+    ln -sfn "$(realpath --relative-to="$DRIVER_DIR" "$KSU_LINK_SRC")" "kernelsu" && echo "[+] Symlink created."
 
-    grep -q "kernelsu" "$DRIVER_MAKEFILE" || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> "$DRIVER_MAKEFILE" && echo "[+] Modified Makefile."
-    grep -q 'source "drivers/kernelsu/Kconfig"' "$DRIVER_KCONFIG" || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" "$DRIVER_KCONFIG" && echo "[+] Modified Kconfig."
+    if ! grep -q "kernelsu" "$DRIVER_MAKEFILE"; then
+        printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> "$DRIVER_MAKEFILE"
+        echo "[+] Modified Makefile."
+    fi
+
+    if ! grep -q 'source "drivers/kernelsu/Kconfig"' "$DRIVER_KCONFIG"; then
+        sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' "$DRIVER_KCONFIG"
+        echo "[+] Modified Kconfig."
+    fi
     echo '[+] Done.'
 }
 
