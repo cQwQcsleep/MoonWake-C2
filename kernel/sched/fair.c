@@ -7468,7 +7468,7 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 		 * domain can only use the capacity which is not capped by
 		 * thermal constraints.
 		 */
-		allowed_cap = cpu_cap - thermal_load_avg(cpu_rq(cpu));
+		allowed_cap = cpu_cap - arch_scale_thermal_pressure(cpu);
 		max_util = sum_util = 0;
 
 		/*
@@ -7490,8 +7490,9 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 			 * is already enough to scale the EM reported power
 			 * consumption at the (eventually clamped) cpu_capacity.
 			 */
-			sum_util += effective_cpu_util(cpu, util_cfs_energy, cpu_cap,
-						       ENERGY_UTIL, NULL);
+			sum_util += min(effective_cpu_util(cpu, util_cfs_energy, cpu_cap,
+							   ENERGY_UTIL, NULL),
+					allowed_cap);
 
 			/*
 			 * Performance domain frequency: utilization clamping
@@ -7509,7 +7510,7 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 					     READ_ONCE(cpu_rq(cpu)->cfs.avg.runnable_avg));
 			cpu_util = effective_cpu_util(cpu, util_cfs_boost, cpu_cap,
 						      FREQUENCY_UTIL, tsk);
-			max_util = max(max_util, cpu_util);
+			max_util = max(max_util, min(cpu_util, allowed_cap));
 
 #ifdef CONFIG_MTK_SCHED_EXTENSION
 			trace_sched_energy_util(dst_cpu, max_util, sum_util, cpu, util_cfs,
